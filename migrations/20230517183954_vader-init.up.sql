@@ -10,8 +10,7 @@ CREATE TABLE teams (
     id UUID PRIMARY KEY,
     name TEXT,
     score INTEGER,
-    logo TEXT,
-    description TEXT
+    logo TEXT
 );
 
 CREATE TABLE users (

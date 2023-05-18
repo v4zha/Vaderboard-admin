@@ -13,12 +13,32 @@ impl<'a> Player<'a> for User {
             score: 0,
         }
     }
-    fn add_player(&'a self, _db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
-        Box::pin(async move { unimplemented!() })
+    fn add_player(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
+        let id = self.id.to_string();
+        let name = &self.name;
+        let logo = self.get_logo();
+        Box::pin(async move {
+            sqlx::query!(
+                "INSERT INTO users (id,name,score,logo) VALUES (?,?,?,?)",
+                id,
+                name,
+                self.score,
+                logo
+            )
+            .execute(db_pool)
+            .await
+            .map(|_f| ())
+        })
     }
-    fn update_score(&'a mut self, points: i64, _db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
+    fn update_score(&'a mut self, points: i64, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
         self.score += points;
-        Box::pin(async move { unimplemented!() })
+        let id = self.id.to_string();
+        Box::pin(async move {
+            sqlx::query!("UPDATE users set score=score+? WHERE id=?", points, id)
+                .execute(db_pool)
+                .await
+                .map(|_f| ())
+        })
     }
     fn get_id(&self) -> Uuid {
         self.id
@@ -38,12 +58,33 @@ impl<'a> Player<'a> for Team {
             score: 0,
         }
     }
-    fn add_player(&'a self, _db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
-        Box::pin(async move { unimplemented!() })
+    fn add_player(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
+        Box::pin(async move {
+            let id = self.id.to_string();
+            let name = &self.name;
+            let logo = self.get_logo();
+            sqlx::query!(
+                "INSERT INTO teams (id,name,score,logo) VALUES (?,?,?,?)",
+                id,
+                name,
+                self.score,
+                logo
+            )
+            .execute(db_pool)
+            .await
+            .map(|_f| ())
+        })
     }
-    fn update_score(&'a mut self, points: i64, _db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
+    fn update_score(&'a mut self, points: i64, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
         self.score += points;
-        Box::pin(async move { unimplemented!() })
+        self.score += points;
+        let id = self.id.to_string();
+        Box::pin(async move {
+            sqlx::query!("UPDATE teams set score=score+? WHERE id=?", points, id)
+                .execute(db_pool)
+                .await
+                .map(|_f| ())
+        })
     }
     fn get_id(&self) -> Uuid {
         self.id
