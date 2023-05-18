@@ -24,12 +24,15 @@ pub trait VaderEvent<'a> {
             id: Uuid::new_v4(),
             name,
             logo,
-            players: Vec::<T>::new(),
             marker: PhantomData,
         }
     }
     fn add_event(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a>;
-    fn add_participant(&self, participant: Self::Participant) -> AsyncDbRes;
+    fn add_participant(
+        &'a self,
+        participant: Self::Participant,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a>;
     fn get_logo(&self) -> String;
 }
 
@@ -39,7 +42,6 @@ pub struct Event<'a, T: Player<'a>> {
     pub name: String,
     #[serde(default)]
     pub logo: Option<String>,
-    pub players: Vec<T>,
     marker: PhantomData<&'a T>,
 }
 
@@ -50,7 +52,7 @@ pub struct Team {
     pub score: i64,
     #[serde(default)]
     pub logo: Option<String>,
-    pub members: Vec<User>,
+    pub members: Vec<Uuid>,
 }
 #[derive(Serialize, Deserialize)]
 pub struct User {
