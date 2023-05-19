@@ -25,8 +25,8 @@ impl<'a> Player<'a> for User {
                 logo
             )
             .execute(db_pool)
-            .await
-            .map(|_f| ())
+            .await?;
+            Ok(())
         })
     }
     fn update_score(&'a mut self, points: i64, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
@@ -35,8 +35,8 @@ impl<'a> Player<'a> for User {
         Box::pin(async move {
             sqlx::query!("UPDATE users set score=score+? WHERE id=?", points, id)
                 .execute(db_pool)
-                .await
-                .map(|_f| ())
+                .await?;
+            Ok(())
         })
     }
     fn get_id(&self) -> Uuid {
@@ -70,8 +70,8 @@ impl<'a> Player<'a> for Team {
                 logo
             )
             .execute(db_pool)
-            .await
-            .map(|_f| ())
+            .await?;
+            Ok(())
         })
     }
     fn update_score(&'a mut self, points: i64, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
@@ -81,8 +81,8 @@ impl<'a> Player<'a> for Team {
         Box::pin(async move {
             sqlx::query!("UPDATE teams set score=score+? WHERE id=?", points, id)
                 .execute(db_pool)
-                .await
-                .map(|_f| ())
+                .await?;
+            Ok(())
         })
     }
     fn get_id(&self) -> Uuid {
@@ -178,8 +178,8 @@ impl<'a> VaderEvent<'a> for Event<'a, Team> {
                 "team_event"
             )
             .execute(db_pool)
-            .await
-            .map(|_f| ())
+            .await?;
+            Ok(())
         })
     }
     fn get_logo(&self) -> String {
@@ -227,8 +227,8 @@ impl<'a> VaderEvent<'a> for Event<'a, User> {
                 "individual_event"
             )
             .execute(db_pool)
-            .await
-            .map(|_f| ())
+            .await?;
+            Ok(())
         })
     }
     fn get_logo(&self) -> String {
