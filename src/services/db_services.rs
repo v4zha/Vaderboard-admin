@@ -93,16 +93,38 @@ impl<'a> Player<'a> for Team {
     }
 }
 impl<'a> Team {
-    fn add_members(&'a mut self, members: Vec<User>, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
-        self.members = members.iter().map(|m| m.id).collect::<Vec<Uuid>>();
+    fn add_members(&'a mut self, members: Vec<Uuid>, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
+        self.members.extend(&members);
+        Self::add_members_from_id(self.id, members, db_pool)
+    }
+    fn add_member(&'a mut self, member_id: Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
+        self.members.push(member_id);
+        Self::add_member_from_id(self.id, member_id, db_pool)
+    }
+    fn add_member_from_id(team_id: Uuid, member: Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
+        let team_id = team_id.to_string();
+        let user_id = member.to_string();
         Box::pin(async move {
-            for member in &members {
-                member.add_player(db_pool).await?;
-            }
+            sqlx::query!(
+                "INSERT into team_users (team_id,user_id) VALUES (?,?)",
+                team_id,
+                user_id,
+            )
+            .execute(db_pool)
+            .await?;
+            Ok(())
+        })
+    }
+    fn add_members_from_id(
+        team_id: Uuid,
+        members: Vec<Uuid>,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a> {
+        Box::pin(async move {
             let mut transaction = db_pool.begin().await?;
-            let team_id = self.id.to_string();
-            for member in members {
-                let user_id = member.id.to_string();
+            let team_id = team_id.to_string();
+            for mem_id in members {
+                let user_id = mem_id.to_string();
                 sqlx::query!(
                     "INSERT into team_users (team_id,user_id) VALUES (?,?)",
                     team_id,
@@ -122,8 +144,15 @@ impl<'a> VaderEvent<'a> for Event<'a, Team> {
         participant: Self::Participant,
         db_pool: &'a SqlitePool,
     ) -> AsyncDbRes {
-        let event_id = self.id.to_string();
-        let team_id = participant.id.to_string();
+        Self::add_participant_from_id(self.id, participant.id, db_pool)
+    }
+    fn add_participant_from_id(
+        event_id: Uuid,
+        team_id: Uuid,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes {
+        let event_id = event_id.to_string();
+        let team_id = team_id.to_string();
         Box::pin(async move {
             sqlx::query!(
                 "INSERT INTO event_teams (event_id,team_id) VALUES (?,?)",
@@ -165,8 +194,15 @@ impl<'a> VaderEvent<'a> for Event<'a, User> {
         participant: Self::Participant,
         db_pool: &'a SqlitePool,
     ) -> AsyncDbRes<'a> {
-        let event_id = self.id.to_string();
-        let user_id = participant.id.to_string();
+        Self::add_participant_from_id(self.id, participant.id, db_pool)
+    }
+    fn add_participant_from_id(
+        event_id: Uuid,
+        user_id: Uuid,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a> {
+        let event_id = event_id.to_string();
+        let user_id = user_id.to_string();
         Box::pin(async move {
             sqlx::query!(
                 "INSERT INTO event_users (event_id,user_id) VALUES (?,?)",
