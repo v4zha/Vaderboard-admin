@@ -7,37 +7,22 @@ use uuid::Uuid;
 
 pub type AsyncDbRes<'a> = Pin<Box<dyn Future<Output = Result<(), Error>> + Send + 'a>>;
 
-pub trait Player<'a>: Serialize {
-    type DeserializedType: Deserialize<'static>;
+pub trait Player<'a> {
     fn add_player(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a>;
     fn update_score(&'a mut self, points: i64, db_pool: &'a SqlitePool) -> AsyncDbRes<'a>;
-    fn new(name: String, logo: Option<String>) -> Self;
     fn get_id(&self) -> Uuid;
     fn get_logo(&self) -> String;
 }
 
 pub trait VaderEvent<'a> {
     type Participant: Player<'a>;
-
-    fn new<T: Player<'a>>(name: String, logo: Option<String>) -> Event<'a, T> {
-        Event {
-            id: Uuid::new_v4(),
-            name,
-            logo,
-            marker: PhantomData,
-        }
-    }
     fn add_event(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a>;
     fn add_participant(
         &'a self,
         participant: Self::Participant,
         db_pool: &'a SqlitePool,
     ) -> AsyncDbRes<'a>;
-    fn add_participant_from_id(
-        event_id: Uuid,
-        p_id: Uuid,
-        db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a>;
+    fn add_participant_from_id(&'a self, p_id: Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a>;
     fn get_logo(&self) -> String;
 }
 
@@ -66,4 +51,15 @@ pub struct User {
     pub score: i64,
     #[serde(default)]
     pub logo: Option<String>,
+}
+
+impl<'a, T: Player<'a>> Event<'a, T> {
+    pub fn new(name: String, logo: Option<String>) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            name,
+            logo,
+            marker: PhantomData,
+        }
+    }
 }

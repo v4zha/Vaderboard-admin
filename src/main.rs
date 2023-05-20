@@ -20,7 +20,7 @@ async fn main() -> std::io::Result<()> {
     let port = env::var("PORT").expect("Error Reading PORT Env Variable");
     let db_url = env::var("DATABASE_URL").expect("Error Reading DATABASE_URL Env Variable");
     let host_port = format!("{}:{}", host, port);
-    let db_pool = connct_db(&db_url)
+    let db_pool = connect_db(&db_url)
         .await
         .expect("Error connecting to Database");
     log::info!("Database connection successful");
@@ -31,7 +31,7 @@ async fn main() -> std::io::Result<()> {
         .await
 }
 
-async fn connct_db(db_url: &str) -> Result<SqlitePool, sqlx::Error> {
+async fn connect_db(db_url: &str) -> Result<SqlitePool, sqlx::Error> {
     if !Sqlite::database_exists(db_url).await? {
         Sqlite::create_database(db_url).await?;
     }
