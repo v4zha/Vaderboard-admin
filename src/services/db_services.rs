@@ -3,7 +3,7 @@ use sqlx::SqlitePool;
 use uuid::Uuid;
 
 impl<'a> Player<'a> for User {
-    fn add_player(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
+    fn add_player(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
         let id = self.id.to_string();
         let name = &self.name;
         let logo = self.get_logo();
@@ -20,7 +20,7 @@ impl<'a> Player<'a> for User {
             Ok(())
         })
     }
-    fn update_score(&'a mut self, points: i64, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
+    fn update_score(&'a mut self, points: i64, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
         self.score += points;
         let id = self.id.to_string();
         Box::pin(async move {
@@ -39,7 +39,7 @@ impl<'a> Player<'a> for User {
 }
 
 impl<'a> Player<'a> for Team {
-    fn add_player(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
+    fn add_player(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
         Box::pin(async move {
             let id = self.id.to_string();
             let name = &self.name;
@@ -56,7 +56,7 @@ impl<'a> Player<'a> for Team {
             Ok(())
         })
     }
-    fn update_score(&'a mut self, points: i64, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
+    fn update_score(&'a mut self, points: i64, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
         self.score += points;
         self.score += points;
         let id = self.id.to_string();
@@ -75,15 +75,23 @@ impl<'a> Player<'a> for Team {
     }
 }
 impl<'a> Team {
-    fn add_members(&'a mut self, members: Vec<Uuid>, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
-        self.members.extend(&members);
+    fn add_members(
+        &'a mut self,
+        members: &'a Vec<Uuid>,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a, ()> {
+        self.members.extend(members);
         Self::add_members_from_id(self.id, members, db_pool)
     }
-    fn add_member(&'a mut self, member_id: Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
+    fn add_member(&'a mut self, member_id: Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
         self.members.push(member_id);
         Self::add_member_from_id(self.id, member_id, db_pool)
     }
-    fn add_member_from_id(team_id: Uuid, member: Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
+    fn add_member_from_id(
+        team_id: Uuid,
+        member: Uuid,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a, ()> {
         let team_id = team_id.to_string();
         let user_id = member.to_string();
         Box::pin(async move {
@@ -99,9 +107,9 @@ impl<'a> Team {
     }
     fn add_members_from_id(
         team_id: Uuid,
-        members: Vec<Uuid>,
+        members: &'a Vec<Uuid>,
         db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a> {
+    ) -> AsyncDbRes<'a, ()> {
         Box::pin(async move {
             let mut transaction = db_pool.begin().await?;
             let team_id = team_id.to_string();
@@ -123,16 +131,16 @@ impl<'a> VaderEvent<'a> for Event<'a, Team> {
     type Participant = Team;
     fn add_participant(
         &'a self,
-        participant: Self::Participant,
+        participant: &Self::Participant,
         db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes {
+    ) -> AsyncDbRes<'a, ()> {
         Self::add_participant_from_id(self.id, participant.get_id(), db_pool)
     }
     fn add_participant_from_id(
         event_id: Uuid,
         team_id: Uuid,
         db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes {
+    ) -> AsyncDbRes<'a, ()> {
         let event_id = event_id.to_string();
         let team_id = team_id.to_string();
         Box::pin(async move {
@@ -147,7 +155,7 @@ impl<'a> VaderEvent<'a> for Event<'a, Team> {
         })
     }
 
-    fn add_event(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
+    fn add_event(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
         let logo = self.get_logo();
         let id = self.id.to_string();
         let name = &self.name;
@@ -173,16 +181,16 @@ impl<'a> VaderEvent<'a> for Event<'a, User> {
     type Participant = User;
     fn add_participant(
         &'a self,
-        participant: Self::Participant,
+        participant: &Self::Participant,
         db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a> {
+    ) -> AsyncDbRes<'a, ()> {
         Self::add_participant_from_id(self.id, participant.get_id(), db_pool)
     }
     fn add_participant_from_id(
         event_id: Uuid,
         user_id: Uuid,
         db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a> {
+    ) -> AsyncDbRes<'a, ()> {
         let event_id = event_id.to_string();
         let user_id = user_id.to_string();
         Box::pin(async move {
@@ -196,7 +204,7 @@ impl<'a> VaderEvent<'a> for Event<'a, User> {
             Ok(())
         })
     }
-    fn add_event(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
+    fn add_event(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
         let logo = self.get_logo();
         let id = self.id.to_string();
         let name = &self.name;

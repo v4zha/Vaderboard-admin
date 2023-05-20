@@ -5,28 +5,28 @@ use std::marker::PhantomData;
 use std::pin::Pin;
 use uuid::Uuid;
 
-pub type AsyncDbRes<'a> = Pin<Box<dyn Future<Output = Result<(), Error>> + Send + 'a>>;
+pub type AsyncDbRes<'a, T> = Pin<Box<dyn Future<Output = Result<T, Error>> + Send + 'a>>;
 
 pub trait Player<'a> {
-    fn add_player(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a>;
-    fn update_score(&'a mut self, points: i64, db_pool: &'a SqlitePool) -> AsyncDbRes<'a>;
+    fn add_player(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()>;
+    fn update_score(&'a mut self, points: i64, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()>;
     fn get_id(&self) -> Uuid;
     fn get_logo(&self) -> String;
 }
 
 pub trait VaderEvent<'a> {
     type Participant: Player<'a>;
-    fn add_event(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a>;
+    fn add_event(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()>;
     fn add_participant(
         &'a self,
-        participant: Self::Participant,
+        participant: &Self::Participant,
         db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a>;
+    ) -> AsyncDbRes<'a, ()>;
     fn add_participant_from_id(
         team_id: Uuid,
         p_id: Uuid,
         db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a>;
+    ) -> AsyncDbRes<'a, ()>;
     fn get_logo(&self) -> String;
 }
 
