@@ -2,7 +2,7 @@ use crate::models::v_models::{AsyncDbRes, Event, Player, Team, User, VaderEvent}
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
-impl<'a> Player<'a> for Box<User> {
+impl<'a> Player<'a> for User {
     fn add_player(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
         let id = self.id.to_string();
         let name = &self.name;
@@ -38,7 +38,7 @@ impl<'a> Player<'a> for Box<User> {
     }
 }
 
-impl<'a> Player<'a> for Box<Team> {
+impl<'a> Player<'a> for Team {
     fn add_player(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
         Box::pin(async move {
             let id = self.id.to_string();
@@ -119,32 +119,21 @@ impl<'a> Team {
         })
     }
 }
-impl<'a> Player<'a> for Box<dyn Player<'a>> {
-    fn add_player(&'a self, _db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
-        Box::pin(async move { Ok(()) })
-    }
-    fn update_score(&'a mut self, _points: i64, _db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
-        Box::pin(async move { Ok(()) })
-    }
-    fn get_id(&self) -> Uuid {
-        Uuid::new_v4()
-    }
-    fn get_logo(&self) -> String {
-        String::new()
-    }
-}
-
-impl<'a> VaderEvent<'a> for Event<'a, Box<Team>> {
-    type Participant = Box<dyn Player<'a>>;
+impl<'a> VaderEvent<'a> for Event<'a, Team> {
+    type Participant = Team;
     fn add_participant(
         &'a self,
         participant: Self::Participant,
         db_pool: &'a SqlitePool,
     ) -> AsyncDbRes {
-        Self::add_participant_from_id(&self, participant.get_id(), db_pool)
+        Self::add_participant_from_id(self.id, participant.get_id(), db_pool)
     }
-    fn add_participant_from_id(&'a self, team_id: Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes {
-        let event_id = self.id.to_string();
+    fn add_participant_from_id(
+        event_id: Uuid,
+        team_id: Uuid,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes {
+        let event_id = event_id.to_string();
         let team_id = team_id.to_string();
         Box::pin(async move {
             sqlx::query!(
@@ -180,17 +169,21 @@ impl<'a> VaderEvent<'a> for Event<'a, Box<Team>> {
     }
 }
 
-impl<'a> VaderEvent<'a> for Event<'a, Box<User>> {
-    type Participant = Box<dyn Player<'a>>;
+impl<'a> VaderEvent<'a> for Event<'a, User> {
+    type Participant = User;
     fn add_participant(
         &'a self,
         participant: Self::Participant,
         db_pool: &'a SqlitePool,
     ) -> AsyncDbRes<'a> {
-        Self::add_participant_from_id(&self, participant.get_id(), db_pool)
+        Self::add_participant_from_id(self.id, participant.get_id(), db_pool)
     }
-    fn add_participant_from_id(&self, user_id: Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a> {
-        let event_id = self.id.to_string();
+    fn add_participant_from_id(
+        event_id: Uuid,
+        user_id: Uuid,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a> {
+        let event_id = event_id.to_string();
         let user_id = user_id.to_string();
         Box::pin(async move {
             sqlx::query!(

@@ -22,7 +22,11 @@ pub trait VaderEvent<'a> {
         participant: Self::Participant,
         db_pool: &'a SqlitePool,
     ) -> AsyncDbRes<'a>;
-    fn add_participant_from_id(&'a self, p_id: Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a>;
+    fn add_participant_from_id(
+        team_id: Uuid,
+        p_id: Uuid,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a>;
     fn get_logo(&self) -> String;
 }
 
