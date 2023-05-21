@@ -1,7 +1,6 @@
+use actix_web::web::Data;
 use actix_web::{middleware::Logger, App, HttpServer};
 use dotenv::dotenv;
-use sqlx::migrate::MigrateDatabase;
-use sqlx::Sqlite;
 use sqlx::SqlitePool;
 use std::env;
 
@@ -15,9 +14,9 @@ mod services;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
-    env::set_var("RUST_LOG", "actix_web=info");
+    env::set_var("RUST_LOG", "actix_web=debug");
     env_logger::builder()
-        .filter_level(log::LevelFilter::Info)
+        .filter_level(log::LevelFilter::Debug)
         .init();
     let host = env::var("HOST").expect("Error Reading HOST Env Variable");
     let port = env::var("PORT").expect("Error Reading PORT Env Variable");
@@ -31,7 +30,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
-            .app_data(db_pool.clone())
+            .app_data(Data::new(db_pool.clone()))
             .service(add_team_event)
             .service(add_user_event)
     })

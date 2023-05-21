@@ -1,6 +1,6 @@
+use dotenv::dotenv;
 use sqlx::migrate::MigrateDatabase;
 use sqlx::{Sqlite, SqlitePool};
-use dotenv::dotenv;
 use std::env;
 
 #[tokio::main]
