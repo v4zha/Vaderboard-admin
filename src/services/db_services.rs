@@ -252,7 +252,7 @@ impl<'a, T> Event<'a, T, NewEvent>
 where
     T: Player<'a>,
 {
-    fn start_event(self) -> Event<'a, T, ActiveEvent> {
+    pub fn start_event(&self) -> Event<'a, T, ActiveEvent> {
         Into::<Event<'a, T, ActiveEvent>>::into(self)
     }
 }
@@ -260,34 +260,34 @@ impl<'a, T> Event<'a, T, ActiveEvent>
 where
     T: Player<'a>,
 {
-    fn end_event(self) -> Event<'a, T, EndEvent> {
+    pub fn end_event(&self) -> Event<'a, T, EndEvent> {
         Into::<Event<'a, T, EndEvent>>::into(self)
     }
 }
 
-impl<'a, T> Into<Event<'a, T, ActiveEvent>> for Event<'a, T, NewEvent>
+impl<'a, T> Into<Event<'a, T, ActiveEvent>> for &Event<'a, T, NewEvent>
 where
     T: Player<'a>,
 {
     fn into(self) -> Event<'a, T, ActiveEvent> {
         Event {
             id: self.id,
-            name: self.name,
-            logo: self.logo,
+            name: self.name.to_owned(),
+            logo: self.logo.to_owned(),
             player_marker: PhantomData::<&'a T>,
             state_marker: PhantomData::<&'a ActiveEvent>,
         }
     }
 }
-impl<'a, T> Into<Event<'a, T, EndEvent>> for Event<'a, T, ActiveEvent>
+impl<'a, T> Into<Event<'a, T, EndEvent>> for &Event<'a, T, ActiveEvent>
 where
     T: Player<'a>,
 {
     fn into(self) -> Event<'a, T, EndEvent> {
         Event {
             id: self.id,
-            name: self.name,
-            logo: self.logo,
+            name: self.name.to_owned(),
+            logo: self.logo.to_owned(),
             player_marker: PhantomData::<&'a T>,
             state_marker: PhantomData::<&'a EndEvent>,
         }

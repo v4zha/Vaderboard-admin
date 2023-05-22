@@ -4,12 +4,13 @@ use dotenv::dotenv;
 use sqlx::SqlitePool;
 use std::env;
 
-use crate::handlers::db_handlers::add_team_event;
-use crate::handlers::db_handlers::add_user_event;
-
 mod handlers;
 mod models;
 mod services;
+
+use handlers::event_handlers::{add_team_event, add_user_event};
+
+use crate::models::v_models::AppState;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -27,9 +28,11 @@ async fn main() -> std::io::Result<()> {
         .expect("Error connecting to Database");
     log::info!("Database connection successful");
     log::info!("Server running at {}", host_port);
+    let app_state = Data::new(AppState::new());
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
+            .app_data(Data::new(app_state.clone()))
             .app_data(Data::new(db_pool.clone()))
             .service(add_team_event)
             .service(add_user_event)

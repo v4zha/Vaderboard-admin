@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use super::v_models::{Event, Team, User};
 
@@ -16,4 +17,8 @@ impl Into<Event<'_, User>> for EventInfo {
     fn into(self) -> Event<'static, User> {
         Event::<User>::new(self.name, self.logo)
     }
+}
+#[derive(Serialize, Deserialize)]
+pub struct EventStateReq {
+    id: Uuid,
 }
