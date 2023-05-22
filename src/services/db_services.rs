@@ -1,4 +1,8 @@
-use crate::models::v_models::{AsyncDbRes, Event, Player, Team, User, VaderEvent};
+use std::marker::PhantomData;
+
+use crate::models::v_models::{
+    ActiveEvent, AsyncDbRes, EndEvent, Event, NewEvent, Player, Team, User, VaderEvent,
+};
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
@@ -17,16 +21,6 @@ impl<'a> Player<'a> for User {
             )
             .execute(db_pool)
             .await?;
-            Ok(())
-        })
-    }
-    fn update_score(&'a mut self, points: i64, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
-        self.score += points;
-        let id = self.id.to_string();
-        Box::pin(async move {
-            sqlx::query!("UPDATE users set score=score+? WHERE id=?", points, id)
-                .execute(db_pool)
-                .await?;
             Ok(())
         })
     }
@@ -56,17 +50,6 @@ impl<'a> Player<'a> for Team {
             Ok(())
         })
     }
-    fn update_score(&'a mut self, points: i64, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
-        self.score += points;
-        self.score += points;
-        let id = self.id.to_string();
-        Box::pin(async move {
-            sqlx::query!("UPDATE teams set score=score+? WHERE id=?", points, id)
-                .execute(db_pool)
-                .await?;
-            Ok(())
-        })
-    }
     fn get_id(&self) -> Uuid {
         self.id
     }
@@ -77,7 +60,7 @@ impl<'a> Player<'a> for Team {
 impl<'a> Team {
     fn add_members(
         &'a mut self,
-        members: &'a Vec<Uuid>,
+        members: &'a [Uuid],
         db_pool: &'a SqlitePool,
     ) -> AsyncDbRes<'a, ()> {
         self.members.extend(members);
@@ -107,7 +90,7 @@ impl<'a> Team {
     }
     fn add_members_from_id(
         team_id: Uuid,
-        members: &'a Vec<Uuid>,
+        members: &'a [Uuid],
         db_pool: &'a SqlitePool,
     ) -> AsyncDbRes<'a, ()> {
         Box::pin(async move {
@@ -225,6 +208,92 @@ impl<'a> VaderEvent<'a> for Event<'a, User> {
         self.logo.as_ref().unwrap_or(&String::new()).to_string()
     }
 }
+
+impl<'a> Event<'a, User, ActiveEvent> {
+    fn update_score(user: &User, points: i64, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
+        let id = user.id;
+        Self::update_score_by_id(&id, points, db_pool)
+    }
+    fn update_score_by_id(
+        user_id: &Uuid,
+        points: i64,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a, ()> {
+        let id = user_id.to_string();
+        Box::pin(async move {
+            sqlx::query!("UPDATE users set score=score+? WHERE id=?", points, id)
+                .execute(db_pool)
+                .await?;
+            Ok(())
+        })
+    }
+}
+
+impl<'a> Event<'a, Team, ActiveEvent> {
+    fn update_score(team: &Team, points: i64, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
+        let id = team.id;
+        Self::update_score_by_id(&id, points, db_pool)
+    }
+    fn update_score_by_id(
+        team_id: &Uuid,
+        points: i64,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a, ()> {
+        let id = team_id.to_string();
+        Box::pin(async move {
+            sqlx::query!("UPDATE teams set score=score+? WHERE id=?", points, id)
+                .execute(db_pool)
+                .await?;
+            Ok(())
+        })
+    }
+}
+impl<'a, T> Event<'a, T, NewEvent>
+where
+    T: Player<'a>,
+{
+    fn start_event(self) -> Event<'a, T, ActiveEvent> {
+        Into::<Event<'a, T, ActiveEvent>>::into(self)
+    }
+}
+impl<'a, T> Event<'a, T, ActiveEvent>
+where
+    T: Player<'a>,
+{
+    fn end_event(self) -> Event<'a, T, EndEvent> {
+        Into::<Event<'a, T, EndEvent>>::into(self)
+    }
+}
+
+impl<'a, T> Into<Event<'a, T, ActiveEvent>> for Event<'a, T, NewEvent>
+where
+    T: Player<'a>,
+{
+    fn into(self) -> Event<'a, T, ActiveEvent> {
+        Event {
+            id: self.id,
+            name: self.name,
+            logo: self.logo,
+            player_marker: PhantomData::<&'a T>,
+            state_marker: PhantomData::<&'a ActiveEvent>,
+        }
+    }
+}
+impl<'a, T> Into<Event<'a, T, EndEvent>> for Event<'a, T, ActiveEvent>
+where
+    T: Player<'a>,
+{
+    fn into(self) -> Event<'a, T, EndEvent> {
+        Event {
+            id: self.id,
+            name: self.name,
+            logo: self.logo,
+            player_marker: PhantomData::<&'a T>,
+            state_marker: PhantomData::<&'a EndEvent>,
+        }
+    }
+}
+
 impl Team {
     fn new(name: String, logo: Option<String>) -> Self {
         Self {

@@ -9,7 +9,6 @@ pub type AsyncDbRes<'a, T> = Pin<Box<dyn Future<Output = Result<T, Error>> + Sen
 
 pub trait Player<'a> {
     fn add_player(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()>;
-    fn update_score(&'a mut self, points: i64, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()>;
     fn get_id(&self) -> Uuid;
     fn get_logo(&self) -> String;
 }
@@ -30,13 +29,23 @@ pub trait VaderEvent<'a> {
     fn get_logo(&self) -> String;
 }
 
+pub trait EventState {}
+
+pub struct ActiveEvent;
+pub struct NewEvent;
+pub struct EndEvent;
+impl EventState for ActiveEvent {}
+impl EventState for NewEvent {}
+impl EventState for EndEvent {}
+
 #[derive(Serialize, Deserialize)]
-pub struct Event<'a, T: Player<'a>> {
+pub struct Event<'a, T: Player<'a>, U: EventState = NewEvent> {
     pub id: Uuid,
     pub name: String,
     #[serde(default)]
     pub logo: Option<String>,
-    marker: PhantomData<&'a T>,
+    pub player_marker: PhantomData<&'a T>,
+    pub state_marker: PhantomData<&'a U>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -57,13 +66,14 @@ pub struct User {
     pub logo: Option<String>,
 }
 
-impl<'a, T: Player<'a>> Event<'a, T> {
+impl<'a, T: Player<'a>, U: EventState> Event<'a, T, U> {
     pub fn new(name: String, logo: Option<String>) -> Self {
         Self {
             id: Uuid::new_v4(),
             name,
             logo,
-            marker: PhantomData,
+            player_marker: PhantomData::<&'a T>,
+            state_marker: PhantomData::<&'a U>,
         }
     }
 }

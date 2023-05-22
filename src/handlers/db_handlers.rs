@@ -1,6 +1,6 @@
 use crate::models::{
     handler_models::EventInfo,
-    v_models::{Event, Player, Team, User, VaderEvent},
+    v_models::{Event, Team, User, VaderEvent},
 };
 use actix_web::{post, web, HttpResponse, Responder};
 use log::{error, info};
