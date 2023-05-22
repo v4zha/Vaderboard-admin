@@ -1,12 +1,14 @@
 use serde::{Deserialize, Serialize};
-use sqlx::{Error, SqlitePool};
+use sqlx::SqlitePool;
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
-pub type AsyncDbRes<'a, T> = Pin<Box<dyn Future<Output = Result<T, Error>> + Send + 'a>>;
+use super::error_models::VaderError;
+
+pub type AsyncDbRes<'a, T> = Pin<Box<dyn Future<Output = Result<T, VaderError>> + Send + 'a>>;
 
 pub enum EventStateWrapper<'a, T: Player<'a>> {
     New(Event<'a, T, NewEvent>),
@@ -60,6 +62,31 @@ impl<'a> EventWrapper<'a> {
         match self {
             Self::TeamEvent(sw) => sw.get_id(),
             Self::UserEvent(sw) => sw.get_id(),
+        }
+    }
+    pub async fn update_score_by_id(
+        &self,
+        p_id: &Uuid,
+        score: i64,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a, ()> {
+        match self {
+            Self::TeamEvent(sw) => match sw {
+                EventStateWrapper::Active(e) => e.update_score_by_id(p_id, score, db_pool).await,
+                _ => Box::pin(async move {
+                    Err(VaderError::EventNotActive(
+                        "Event is not active to Update Score".to_string(),
+                    ))
+                }),
+            },
+            Self::UserEvent(sw) => match sw {
+                EventStateWrapper::Active(e) => e.update_score_by_id(p_id, score, db_pool).await,
+                _ => Box::pin(async move {
+                    Err(VaderError::EventNotActive(
+                        "Event is not active to Update Score".to_string(),
+                    ))
+                }),
+            },
         }
     }
 }

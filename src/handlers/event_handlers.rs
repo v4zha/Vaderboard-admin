@@ -2,14 +2,30 @@ use crate::models::{
     handler_models::EventInfo,
     v_models::{AppState, Event, EventStateWrapper, EventWrapper, Team, User, VaderEvent},
 };
-use actix_web::{post, web, HttpResponse, Responder};
+use actix_web::{post, web, Either, HttpResponse, Responder};
 use log::{debug, error, info};
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
-#[post("/event/team")]
-pub async fn add_team_event(
+#[post("/event/add")]
+pub async fn add_event(
     event_data: web::Json<EventInfo>,
+    app_state: web::Data<AppState>,
+    db_pool: web::Data<SqlitePool>,
+) -> Either<impl Responder, impl Responder> {
+    let event_data = event_data.into_inner();
+    match event_data.event_type {
+        crate::models::handler_models::EventType::TeamEvent => {
+            Either::Left(add_team_event(event_data, app_state, db_pool).await)
+        }
+        crate::models::handler_models::EventType::UserEvent => {
+            Either::Right(add_user_event(event_data, app_state, db_pool).await)
+        }
+    }
+}
+
+pub async fn add_team_event(
+    event_info: EventInfo,
     app_state: web::Data<AppState>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
@@ -22,7 +38,6 @@ pub async fn add_team_event(
         return HttpResponse::BadRequest()
             .body("Another event already Added . Wait till the current Event ends");
     }
-    let event_info: EventInfo = event_data.into_inner();
     let event = Into::<Event<Team>>::into(event_info);
     match event.add_event(&db_pool).await {
         Ok(_) => {
@@ -36,9 +51,8 @@ pub async fn add_team_event(
         }
     }
 }
-#[post("/event/user")]
 pub async fn add_user_event(
-    event_data: web::Json<EventInfo>,
+    event_info: EventInfo,
     app_state: web::Data<AppState>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
@@ -51,7 +65,6 @@ pub async fn add_user_event(
         return HttpResponse::BadRequest()
             .body("Another event already Added . Wait till the current Event ends");
     }
-    let event_info: EventInfo = event_data.into_inner();
     let event = Into::<Event<User>>::into(event_info);
     match event.add_event(&db_pool).await {
         Ok(_) => {
@@ -104,3 +117,7 @@ pub async fn end_event(app_state: web::Data<AppState>) -> impl Responder {
         HttpResponse::Ok().body(body)
     }
 }
+
+
+
+

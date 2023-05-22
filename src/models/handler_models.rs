@@ -4,9 +4,15 @@ use uuid::Uuid;
 use super::v_models::{Event, Team, User};
 
 #[derive(Serialize, Deserialize)]
+pub enum EventType {
+    TeamEvent,
+    UserEvent,
+}
+#[derive(Serialize, Deserialize)]
 pub struct EventInfo {
     name: String,
     logo: Option<String>,
+    pub event_type: EventType,
 }
 impl Into<Event<'_, Team>> for EventInfo {
     fn into(self) -> Event<'static, Team> {
@@ -19,6 +25,7 @@ impl Into<Event<'_, User>> for EventInfo {
     }
 }
 #[derive(Serialize, Deserialize)]
-pub struct EventStateReq {
+pub struct ScoreUpdate {
     id: Uuid,
+    score: i64,
 }

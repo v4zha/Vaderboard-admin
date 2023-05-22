@@ -8,8 +8,7 @@ mod handlers;
 mod models;
 mod services;
 
-use handlers::event_handlers::{add_team_event, add_user_event};
-
+use crate::handlers::event_handlers::add_event;
 use crate::models::v_models::AppState;
 
 #[actix_web::main]
@@ -34,8 +33,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .app_data(Data::new(app_state.clone()))
             .app_data(Data::new(db_pool.clone()))
-            .service(add_team_event)
-            .service(add_user_event)
+            .service(add_event)
     })
     .bind(host_port)?
     .run()
