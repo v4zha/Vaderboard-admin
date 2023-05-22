@@ -8,7 +8,7 @@ mod handlers;
 mod models;
 mod services;
 
-use crate::handlers::event_handlers::add_event;
+use crate::handlers::event_handlers::{add_event, update_score};
 use crate::models::v_models::AppState;
 
 #[actix_web::main]
@@ -34,6 +34,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(app_state.clone()))
             .app_data(Data::new(db_pool.clone()))
             .service(add_event)
+            .service(update_score)
     })
     .bind(host_port)?
     .run()
