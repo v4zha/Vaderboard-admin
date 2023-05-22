@@ -26,6 +26,6 @@ impl Into<Event<'_, User>> for EventInfo {
 }
 #[derive(Serialize, Deserialize)]
 pub struct ScoreUpdate {
-    id: Uuid,
-    score: i64,
+    pub id: Uuid,
+    pub score: i64,
 }

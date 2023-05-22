@@ -139,14 +139,11 @@ pub async fn update_score(
             .update_score_by_id(&sr.id, sr.score, &db_pool)
             .await;
         match res {
-            Ok(_) => {
-                info!("Score updated successfully");
-                HttpResponse::Ok().body("Score updated successfully")
-            }
-            Err(err) => {
-                debug!("Error updating score :\n[error] : {}", err);
+            Ok(_)=>{},
+            Err(err)=>{
+                debug!("Error updating score :\n[error] : {}",err)
                 HttpResponse::BadRequest().body("Error updating Score")
-            }
+            },
         }
     }
 }

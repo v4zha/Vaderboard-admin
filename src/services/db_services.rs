@@ -210,16 +210,16 @@ impl<'a> VaderEvent<'a> for Event<'a, User> {
 }
 
 impl<'a> Event<'a, User, ActiveEvent> {
-    pub async fn update_score(
+    pub fn update_score(
         &self,
         user: &User,
         points: i64,
         db_pool: &'a SqlitePool,
     ) -> AsyncDbRes<'a, ()> {
         let id = user.id;
-        Self::update_score_by_id(self, &id, points, db_pool).await
+        Self::update_score_by_id(self, &id, points, db_pool)
     }
-    pub async fn update_score_by_id(
+    pub fn update_score_by_id(
         &self,
         user_id: &Uuid,
         points: i64,
@@ -236,16 +236,16 @@ impl<'a> Event<'a, User, ActiveEvent> {
 }
 
 impl<'a> Event<'a, Team, ActiveEvent> {
-    pub async fn update_score(
+    pub fn update_score(
         &self,
         team: &Team,
         points: i64,
         db_pool: &'a SqlitePool,
     ) -> AsyncDbRes<'a, ()> {
         let id = team.id;
-        Self::update_score_by_id(self, &id, points, db_pool).await
+        Self::update_score_by_id(self, &id, points, db_pool)
     }
-    pub async fn update_score_by_id(
+    pub fn update_score_by_id(
         &self,
         team_id: &Uuid,
         points: i64,

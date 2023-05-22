@@ -64,7 +64,7 @@ impl<'a> EventWrapper<'a> {
             Self::UserEvent(sw) => sw.get_id(),
         }
     }
-    pub async fn update_score_by_id(
+    pub fn update_score_by_id(
         &self,
         p_id: &Uuid,
         score: i64,
@@ -72,7 +72,7 @@ impl<'a> EventWrapper<'a> {
     ) -> AsyncDbRes<'a, ()> {
         match self {
             Self::TeamEvent(sw) => match sw {
-                EventStateWrapper::Active(e) => e.update_score_by_id(p_id, score, db_pool).await,
+                EventStateWrapper::Active(e) => e.update_score_by_id(p_id, score, db_pool),
                 _ => Box::pin(async move {
                     Err(VaderError::EventNotActive(
                         "Event is not active to Update Score".to_string(),
@@ -80,7 +80,7 @@ impl<'a> EventWrapper<'a> {
                 }),
             },
             Self::UserEvent(sw) => match sw {
-                EventStateWrapper::Active(e) => e.update_score_by_id(p_id, score, db_pool).await,
+                EventStateWrapper::Active(e) => e.update_score_by_id(p_id, score, db_pool),
                 _ => Box::pin(async move {
                     Err(VaderError::EventNotActive(
                         "Event is not active to Update Score".to_string(),
