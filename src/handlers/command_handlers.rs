@@ -102,7 +102,7 @@ pub async fn start_event(app_state: web::Data<Arc<AppState>>) -> impl Responder 
         match res {
             Ok(_) => {
                 let body = format!(
-                    "Event id : [{}] stopped successfully",
+                    "Event id : [{}] started successfully",
                     event_state.as_ref().unwrap().get_id()
                 );
                 info!("{}", body);
@@ -130,6 +130,7 @@ pub async fn end_event(app_state: web::Data<Arc<AppState>>) -> impl Responder {
                     event_state.as_ref().unwrap().get_id()
                 );
                 info!("{}", body);
+                *event_state = None;
                 HttpResponse::Ok().body(body)
             }
             Err(e) => HttpResponse::BadRequest().body(e.to_string()),
@@ -164,7 +165,7 @@ pub async fn update_score(
             }
             Err(err) => {
                 debug!("Error updating score :\n[error] : {}", err);
-                HttpResponse::BadRequest().body("Error updating Score")
+                HttpResponse::BadRequest().body(format!("Error updating Score : \n{}", err))
             }
         }
     }
@@ -263,11 +264,11 @@ pub async fn add_team_members(
             .await;
         match res {
             Ok(_) => {
-                info!("Team  added successfully");
-                HttpResponse::Ok().body("Team added successfully")
+                info!("Team Members added successfully : {:?}", mi.members);
+                HttpResponse::Ok().body("Team Members added successfully")
             }
             Err(err) => {
-                debug!("Error adding Team :\n[error] : {}", err);
+                debug!("Error adding Team Members:\n[error] : {}", err);
                 HttpResponse::BadRequest().body("Error adding Team")
             }
         }

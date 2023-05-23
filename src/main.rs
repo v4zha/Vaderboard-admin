@@ -9,7 +9,7 @@ mod handlers;
 mod models;
 mod services;
 
-use crate::handlers::event_handlers::{
+use crate::handlers::command_handlers::{
     add_event, add_team, add_team_members, add_user, end_event, start_event, update_score,
 };
 use crate::models::v_models::AppState;

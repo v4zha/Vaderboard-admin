@@ -1,7 +1,10 @@
 use std::marker::PhantomData;
 
-use crate::models::v_models::{
-    ActiveEvent, AsyncDbRes, EndEvent, Event, NewEvent, Player, Team, User, VaderEvent,
+use crate::models::{
+    error_models::VaderError,
+    v_models::{
+        ActiveEvent, AsyncDbRes, EndEvent, Event, NewEvent, Player, Team, User, VaderEvent,
+    },
 };
 use sqlx::SqlitePool;
 use uuid::Uuid;
@@ -68,13 +71,23 @@ impl<'a> Team {
             let team_id = team_id.to_string();
             for mem_id in members {
                 let user_id = mem_id.to_string();
-                sqlx::query!(
+                let res = sqlx::query!(
                     "INSERT into team_members (team_id,user_id) VALUES (?,?)",
                     team_id,
                     user_id,
                 )
                 .execute(&mut transaction)
-                .await?;
+                .await;
+                match res {
+                    Ok(c) => {
+                        if c.rows_affected().eq(&0) {
+                            return Err(VaderError::TeamNotFound(
+                                "No Team found to Add Team Members",
+                            ));
+                        }
+                    }
+                    Err(err) => return Err(VaderError::SqlxError(err)),
+                }
             }
             Ok(())
         })
@@ -197,9 +210,17 @@ impl<'a> Event<'a, User, ActiveEvent> {
     ) -> AsyncDbRes<'a, ()> {
         let id = user_id.to_string();
         Box::pin(async move {
-            sqlx::query!("UPDATE users set score=score+? WHERE id=?", points, id)
+            let res = sqlx::query!("UPDATE users set score=score+? WHERE id=?", points, id)
                 .execute(db_pool)
-                .await?;
+                .await;
+            match res {
+                Ok(c) => {
+                    if c.rows_affected().eq(&0) {
+                        return Err(VaderError::UserNotFound("No User Found to update Score"));
+                    }
+                }
+                Err(err) => return Err(VaderError::SqlxError(err)),
+            }
             Ok(())
         })
     }
@@ -234,9 +255,17 @@ impl<'a> Event<'a, Team, ActiveEvent> {
     ) -> AsyncDbRes<'a, ()> {
         let id = team_id.to_string();
         Box::pin(async move {
-            sqlx::query!("UPDATE teams set score=score+? WHERE id=?", points, id)
+            let res = sqlx::query!("UPDATE teams set score=score+? WHERE id=?", points, id)
                 .execute(db_pool)
-                .await?;
+                .await;
+            match res {
+                Ok(c) => {
+                    if c.rows_affected().eq(&0) {
+                        return Err(VaderError::TeamNotFound("No Team Found to update Score"));
+                    }
+                }
+                Err(err) => return Err(VaderError::SqlxError(err)),
+            }
             Ok(())
         })
     }
