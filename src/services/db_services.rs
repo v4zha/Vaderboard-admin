@@ -58,36 +58,6 @@ impl<'a> Player<'a> for Team {
     }
 }
 impl<'a> Team {
-    fn add_members(
-        &'a mut self,
-        members: &'a [Uuid],
-        db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a, ()> {
-        self.members.extend(members);
-        Self::add_members_from_id(&self.id, members, db_pool)
-    }
-    fn add_member(&'a mut self, member_id: &Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
-        self.members.push(*member_id);
-        Self::add_member_from_id(&self.id, member_id, db_pool)
-    }
-    fn add_member_from_id(
-        team_id: &Uuid,
-        member: &Uuid,
-        db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a, ()> {
-        let team_id = team_id.to_string();
-        let user_id = member.to_string();
-        Box::pin(async move {
-            sqlx::query!(
-                "INSERT into team_users (team_id,user_id) VALUES (?,?)",
-                team_id,
-                user_id,
-            )
-            .execute(db_pool)
-            .await?;
-            Ok(())
-        })
-    }
     fn add_members_from_id(
         team_id: &'a Uuid,
         members: &'a [Uuid],
