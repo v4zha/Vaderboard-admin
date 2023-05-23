@@ -158,7 +158,7 @@ pub async fn update_score(
     }
 }
 // ippol participants um contestants um onnaaan : )
-#[post("/event/team/add_team/")]
+#[post("/event/team/add")]
 pub async fn add_team(
     c_info: web::Json<ContestantInfo>,
     app_state: web::Data<AppState>,
@@ -192,7 +192,7 @@ pub async fn add_team(
 }
 
 // ippol participants um contestants um onnaaan : )
-#[post("/event/add_user/")]
+#[post("/event/user/add/")]
 pub async fn add_user(
     c_info: web::Json<ContestantInfo>,
     app_state: web::Data<AppState>,
@@ -225,7 +225,7 @@ pub async fn add_user(
     }
 }
 
-#[post("/event/team/add_member")]
+#[post("/event/team/add_members")]
 pub async fn add_team_members(
     m_info: web::Json<MemberInfo>,
     app_state: web::Data<AppState>,
