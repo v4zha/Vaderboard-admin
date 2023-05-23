@@ -1,20 +1,22 @@
 use std::{error::Error, fmt::Display};
 
 #[derive(Debug)]
-pub enum VaderError {
-    EventNotActive(String),
-    EventNotAdded(String),
+pub enum VaderError<'a> {
+    EventNotActive(&'a str),
+    EventNotAdded(&'a str),
+    EventActive(&'a str),
+    EventTypeMismatch(&'a str),
     SqlxError(sqlx::Error),
 }
 
-impl From<sqlx::Error> for VaderError {
+impl<'a> From<sqlx::Error> for VaderError<'a> {
     fn from(value: sqlx::Error) -> Self {
         Self::SqlxError(value)
     }
 }
-impl Error for VaderError {}
+impl<'a> Error for VaderError<'a> {}
 
-impl Display for VaderError {
+impl<'a> Display for VaderError<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             VaderError::EventNotAdded(e) => write!(
@@ -28,6 +30,16 @@ impl Display for VaderError {
                 e
             ),
             VaderError::SqlxError(e) => write!(f, "Sqlx Error.\n[error] : {}", e),
+            VaderError::EventTypeMismatch(e) => write!(
+                f,
+                "Operation Cannot be performed on this Event Type.\n[error] : {}",
+                e
+            ),
+            VaderError::EventActive(e) => write!(
+                f,
+                "Operation Cannot be performed on Active Event.\n[error] : {}",
+                e
+            ),
         }
     }
 }

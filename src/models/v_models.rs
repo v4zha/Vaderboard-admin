@@ -7,8 +7,9 @@ use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 use super::error_models::VaderError;
+use super::handler_models::MemberInfo;
 
-pub type AsyncDbRes<'a, T> = Pin<Box<dyn Future<Output = Result<T, VaderError>> + Send + 'a>>;
+pub type AsyncDbRes<'a, T> = Pin<Box<dyn Future<Output = Result<T, VaderError<'a>>> + Send + 'a>>;
 
 pub enum EventStateWrapper<'a, T: Player<'a>> {
     New(Event<'a, T, NewEvent>),
@@ -75,7 +76,7 @@ impl<'a> EventWrapper<'a> {
                 EventStateWrapper::Active(e) => e.update_score_by_id(p_id, score, db_pool),
                 _ => Box::pin(async move {
                     Err(VaderError::EventNotActive(
-                        "Event is not active to Update Score".to_string(),
+                        "Event is not active to Update Score",
                     ))
                 }),
             },
@@ -83,7 +84,74 @@ impl<'a> EventWrapper<'a> {
                 EventStateWrapper::Active(e) => e.update_score_by_id(p_id, score, db_pool),
                 _ => Box::pin(async move {
                     Err(VaderError::EventNotActive(
-                        "Event is not active to Update Score".to_string(),
+                        "Event is not active to Update Score",
+                    ))
+                }),
+            },
+        }
+    }
+    pub fn add_team(&self, team: Team, db_pool: &'a SqlitePool) -> AsyncDbRes<()> {
+        match self {
+            Self::TeamEvent(sw) => match sw {
+                EventStateWrapper::New(e) => Box::pin(async move {
+                    let _ = team.add_player(db_pool).await;
+                    e.add_participant_from_id(team.id, db_pool).await
+                }),
+                _ => Box::pin(async move {
+                    Err(VaderError::EventActive(
+                        "Team cannot be added as Event already started",
+                    ))
+                }),
+            },
+            Self::UserEvent(_) => Box::pin(async move {
+                Err(VaderError::EventTypeMismatch(
+                    "Cannot add team in user event",
+                ))
+            }),
+        }
+    }
+    pub fn add_team_members(&self, mi: &'a MemberInfo, db_pool: &'a SqlitePool) -> AsyncDbRes<()> {
+        match self {
+            Self::TeamEvent(sw) => {
+                match sw {
+                    EventStateWrapper::New(e) => Box::pin(async move {
+                        e.add_team_members(&mi.team_id, &mi.members, db_pool).await
+                    }),
+                    _ => Box::pin(async move {
+                        Err(VaderError::EventActive(
+                            "TeamMembers cannot be added as Event already started",
+                        ))
+                    }),
+                }
+            }
+            Self::UserEvent(_) => Box::pin(async move {
+                Err(VaderError::EventTypeMismatch(
+                    "Cannot add team in user event",
+                ))
+            }),
+        }
+    }
+    pub fn add_user(&self, user: User, db_pool: &'a SqlitePool) -> AsyncDbRes<()> {
+        match self {
+            Self::TeamEvent(sw) => match sw {
+                EventStateWrapper::New(e) => Box::pin(async move {
+                    let _ = user.add_player(db_pool).await;
+                    e.add_participant_from_id(user.id, db_pool).await
+                }),
+                _ => Box::pin(async move {
+                    Err(VaderError::EventActive(
+                        "Usr cannot be added as Event already started",
+                    ))
+                }),
+            },
+            Self::UserEvent(sw) => match sw {
+                EventStateWrapper::New(e) => Box::pin(async move {
+                    let _ = user.add_player(db_pool).await;
+                    e.add_participant_from_id(user.id, db_pool).await
+                }),
+                _ => Box::pin(async move {
+                    Err(VaderError::EventActive(
+                        "Usr cannot be added as Event already started",
                     ))
                 }),
             },
@@ -115,11 +183,8 @@ pub trait VaderEvent<'a> {
         participant: &Self::Participant,
         db_pool: &'a SqlitePool,
     ) -> AsyncDbRes<'a, ()>;
-    fn add_participant_from_id(
-        team_id: Uuid,
-        p_id: Uuid,
-        db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a, ()>;
+    fn add_participant_from_id(&'a self, p_id: Uuid, db_pool: &'a SqlitePool)
+        -> AsyncDbRes<'a, ()>;
     fn get_logo(&self) -> String;
 }
 
