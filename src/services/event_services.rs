@@ -86,7 +86,10 @@ impl<'a> Team {
                             ));
                         }
                     }
-                    Err(err) => return Err(VaderError::SqlxError(err)),
+                    Err(err) => {
+                        log::error!("Unable to add member :  {}", mem_id);
+                        return Err(VaderError::SqlxError(err));
+                    }
                 }
             }
             Ok(())

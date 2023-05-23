@@ -134,7 +134,7 @@ impl<'a> EventWrapper<'a> {
             }
             Self::UserEvent(_) => Box::pin(async move {
                 Err(VaderError::EventTypeMismatch(
-                    "Cannot add team in user event",
+                    "Cannot add teamMember in user event",
                 ))
             }),
         }
@@ -147,7 +147,7 @@ impl<'a> EventWrapper<'a> {
                 }
                 _ => Box::pin(async move {
                     Err(VaderError::EventActive(
-                        "Usr cannot be added as Event already started",
+                        "User cannot be added as Event already started",
                     ))
                 }),
             },
@@ -158,7 +158,7 @@ impl<'a> EventWrapper<'a> {
                 }),
                 _ => Box::pin(async move {
                     Err(VaderError::EventActive(
-                        "Usr cannot be added as Event already started",
+                        "User cannot be added as Event already started",
                     ))
                 }),
             },

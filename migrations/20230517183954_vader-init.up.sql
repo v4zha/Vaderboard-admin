@@ -1,4 +1,3 @@
--- Add up migration script here
 CREATE TABLE events (
     id UUID PRIMARY KEY,
     name TEXT,

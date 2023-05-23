@@ -269,7 +269,7 @@ pub async fn add_team_members(
             }
             Err(err) => {
                 debug!("Error adding Team Members:\n[error] : {}", err);
-                HttpResponse::BadRequest().body("Error adding Team")
+                HttpResponse::BadRequest().body(format!("Error adding Team Members : {}", err))
             }
         }
     }
