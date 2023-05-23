@@ -81,17 +81,20 @@ impl<'a> Team {
                 match res {
                     Ok(c) => {
                         if c.rows_affected().eq(&0) {
+                            transaction.rollback().await?;
                             return Err(VaderError::TeamNotFound(
                                 "No Team found to Add Team Members",
                             ));
                         }
                     }
                     Err(err) => {
+                        transaction.rollback().await?;
                         log::error!("Unable to add member :  {}", mem_id);
                         return Err(VaderError::SqlxError(err));
                     }
                 }
             }
+            transaction.commit().await?;
             Ok(())
         })
     }
