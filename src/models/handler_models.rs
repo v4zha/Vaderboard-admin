@@ -11,6 +11,7 @@ pub enum EventType {
 #[derive(Deserialize)]
 pub struct EventInfo {
     name: String,
+    #[serde(default)]
     logo: Option<String>,
     pub event_type: EventType,
 }

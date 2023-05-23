@@ -3,6 +3,7 @@ use actix_web::{middleware::Logger, App, HttpServer};
 use dotenv::dotenv;
 use sqlx::SqlitePool;
 use std::env;
+use std::sync::Arc;
 
 mod handlers;
 mod models;
@@ -29,7 +30,7 @@ async fn main() -> std::io::Result<()> {
         .expect("Error connecting to Database");
     log::info!("Database connection successful");
     log::info!("Server running at {}", host_port);
-    let app_state = Data::new(AppState::new());
+    let app_state = Arc::new(AppState::new());
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())

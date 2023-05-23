@@ -4,6 +4,7 @@ use std::{error::Error, fmt::Display};
 pub enum VaderError<'a> {
     EventNotActive(&'a str),
     EventNotAdded(&'a str),
+    EventEnded(&'a str),
     EventActive(&'a str),
     EventTypeMismatch(&'a str),
     SqlxError(sqlx::Error),
@@ -38,6 +39,11 @@ impl<'a> Display for VaderError<'a> {
             VaderError::EventActive(e) => write!(
                 f,
                 "Operation Cannot be performed on Active Event.\n[error] : {}",
+                e
+            ),
+            VaderError::EventEnded(e) => write!(
+                f,
+                "Operation Cannot be performed on Event that Ended.\n[error] : {}",
                 e
             ),
         }

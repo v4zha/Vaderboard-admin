@@ -28,7 +28,7 @@ CREATE TABLE event_teams (
     FOREIGN KEY (team_id) REFERENCES teams (id)
 );
 
-CREATE TABLE team_users (
+CREATE TABLE team_members (
     team_id UUID,
     user_id UUID,
     PRIMARY KEY (team_id, user_id),

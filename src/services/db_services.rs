@@ -69,7 +69,7 @@ impl<'a> Team {
             for mem_id in members {
                 let user_id = mem_id.to_string();
                 sqlx::query!(
-                    "INSERT into team_users (team_id,user_id) VALUES (?,?)",
+                    "INSERT into team_members (team_id,user_id) VALUES (?,?)",
                     team_id,
                     user_id,
                 )

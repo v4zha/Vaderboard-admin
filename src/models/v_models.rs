@@ -3,7 +3,7 @@ use sqlx::SqlitePool;
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use uuid::Uuid;
 
 use super::error_models::VaderError;
@@ -21,16 +21,24 @@ impl<'a, T> EventStateWrapper<'a, T>
 where
     T: Player<'a>,
 {
-    fn start_event(&mut self) {
+    fn start_event(&mut self) -> Result<(), VaderError> {
         match self {
-            Self::New(event) => *self = Self::Active(event.start_event()),
-            _ => {}
+            Self::New(event) => {
+                *self = Self::Active(event.start_event());
+                Ok(())
+            }
+            Self::Active(_) => Err(VaderError::EventActive("Event already Started")),
+            Self::End(_) => Err(VaderError::EventEnded("Event already Ended")),
         }
     }
-    fn end_event(&mut self) {
+    fn end_event(&mut self) -> Result<(), VaderError> {
         match self {
-            Self::Active(event) => *self = Self::End(event.end_event()),
-            _ => {}
+            Self::Active(event) => {
+                *self = Self::End(event.end_event());
+                Ok(())
+            }
+            Self::New(_) => Err(VaderError::EventNotActive("Event didn't start")),
+            Self::End(_) => Err(VaderError::EventEnded("Event already Ended")),
         }
     }
     fn get_id(&self) -> Uuid {
@@ -46,13 +54,13 @@ pub enum EventWrapper<'a> {
     UserEvent(EventStateWrapper<'a, User>),
 }
 impl<'a> EventWrapper<'a> {
-    pub fn start_event(&mut self) {
+    pub fn start_event(&mut self) -> Result<(), VaderError> {
         match self {
             Self::TeamEvent(sw) => sw.start_event(),
             Self::UserEvent(sw) => sw.start_event(),
         }
     }
-    pub fn end_event(&mut self) {
+    pub fn end_event(&mut self) -> Result<(), VaderError> {
         match self {
             Self::TeamEvent(sw) => sw.end_event(),
             Self::UserEvent(sw) => sw.end_event(),
@@ -131,13 +139,12 @@ impl<'a> EventWrapper<'a> {
             }),
         }
     }
-    pub fn add_user(&self, user: User, db_pool: &'a SqlitePool) -> AsyncDbRes<()> {
+    pub fn add_user(&self, user: &'a User, db_pool: &'a SqlitePool) -> AsyncDbRes<()> {
         match self {
             Self::TeamEvent(sw) => match sw {
-                EventStateWrapper::New(e) => Box::pin(async move {
-                    let _ = user.add_player(db_pool).await;
-                    e.add_participant_from_id(user.id, db_pool).await
-                }),
+                EventStateWrapper::New(_) => {
+                    Box::pin(async move { user.add_player(db_pool).await })
+                }
                 _ => Box::pin(async move {
                     Err(VaderError::EventActive(
                         "Usr cannot be added as Event already started",
@@ -159,12 +166,12 @@ impl<'a> EventWrapper<'a> {
     }
 }
 pub struct AppState {
-    pub current_event: Arc<Mutex<Option<EventWrapper<'static>>>>,
+    pub current_event: Mutex<Option<EventWrapper<'static>>>,
 }
 impl AppState {
     pub fn new() -> Self {
         AppState {
-            current_event: Arc::new(Mutex::new(None)),
+            current_event: Mutex::new(None),
         }
     }
 }

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::models::{
     handler_models::{ContestantInfo, CreationResponse, EventInfo, MemberInfo, ScoreUpdate},
     v_models::{AppState, Event, EventStateWrapper, EventWrapper, Team, User, VaderEvent},
@@ -9,7 +11,7 @@ use sqlx::SqlitePool;
 #[post("/event/add")]
 pub async fn add_event(
     event_data: web::Json<EventInfo>,
-    app_state: web::Data<AppState>,
+    app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
 ) -> Either<impl Responder, impl Responder> {
     let event_data = event_data.into_inner();
@@ -25,7 +27,7 @@ pub async fn add_event(
 
 pub async fn add_team_event(
     event_info: EventInfo,
-    app_state: web::Data<AppState>,
+    app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let mut event_state = app_state
@@ -56,7 +58,7 @@ pub async fn add_team_event(
 }
 pub async fn add_user_event(
     event_info: EventInfo,
-    app_state: web::Data<AppState>,
+    app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let mut event_state = app_state
@@ -87,7 +89,7 @@ pub async fn add_user_event(
 }
 
 #[post("/event/start")]
-pub async fn start_event(app_state: web::Data<AppState>) -> impl Responder {
+pub async fn start_event(app_state: web::Data<Arc<AppState>>) -> impl Responder {
     let mut event_state = app_state
         .current_event
         .lock()
@@ -96,17 +98,22 @@ pub async fn start_event(app_state: web::Data<AppState>) -> impl Responder {
         debug!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to start event")
     } else {
-        event_state.as_mut().unwrap().start_event();
-        let body = format!(
-            "Event id : [{}] started successfully",
-            event_state.as_ref().unwrap().get_id()
-        );
-        info!("{}", body);
-        HttpResponse::Ok().body(body)
+        let res = event_state.as_mut().unwrap().start_event();
+        match res {
+            Ok(_) => {
+                let body = format!(
+                    "Event id : [{}] stopped successfully",
+                    event_state.as_ref().unwrap().get_id()
+                );
+                info!("{}", body);
+                HttpResponse::Ok().body(body)
+            }
+            Err(e) => HttpResponse::BadRequest().body(e.to_string()),
+        }
     }
 }
 #[post("/event/stop")]
-pub async fn end_event(app_state: web::Data<AppState>) -> impl Responder {
+pub async fn end_event(app_state: web::Data<Arc<AppState>>) -> impl Responder {
     let mut event_state = app_state
         .current_event
         .lock()
@@ -115,20 +122,25 @@ pub async fn end_event(app_state: web::Data<AppState>) -> impl Responder {
         debug!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to start event")
     } else {
-        event_state.as_mut().unwrap().end_event();
-        let body = format!(
-            "Event id : [{}] stopped successfully",
-            event_state.as_ref().unwrap().get_id()
-        );
-        info!("{}", body);
-        HttpResponse::Ok().body(body)
+        let res = event_state.as_mut().unwrap().end_event();
+        match res {
+            Ok(_) => {
+                let body = format!(
+                    "Event id : [{}] stopped successfully",
+                    event_state.as_ref().unwrap().get_id()
+                );
+                info!("{}", body);
+                HttpResponse::Ok().body(body)
+            }
+            Err(e) => HttpResponse::BadRequest().body(e.to_string()),
+        }
     }
 }
 
 #[post("/score/update")]
 pub async fn update_score(
     score_req: web::Json<ScoreUpdate>,
-    app_state: web::Data<AppState>,
+    app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let event_state = app_state
@@ -161,7 +173,7 @@ pub async fn update_score(
 #[post("/event/team/add")]
 pub async fn add_team(
     c_info: web::Json<ContestantInfo>,
-    app_state: web::Data<AppState>,
+    app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let event_state = app_state
@@ -195,7 +207,7 @@ pub async fn add_team(
 #[post("/event/user/add/")]
 pub async fn add_user(
     c_info: web::Json<ContestantInfo>,
-    app_state: web::Data<AppState>,
+    app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let event_state = app_state
@@ -208,7 +220,11 @@ pub async fn add_user(
     } else {
         let user = Into::<User>::into(c_info.into_inner());
         let user_id = user.id;
-        let res = event_state.as_ref().unwrap().add_user(user, &db_pool).await;
+        let res = event_state
+            .as_ref()
+            .unwrap()
+            .add_user(&user, &db_pool)
+            .await;
         match res {
             Ok(_) => {
                 info!("User  added successfully");
@@ -228,7 +244,7 @@ pub async fn add_user(
 #[post("/event/team/add_members")]
 pub async fn add_team_members(
     m_info: web::Json<MemberInfo>,
-    app_state: web::Data<AppState>,
+    app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let event_state = app_state
