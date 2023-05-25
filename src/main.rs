@@ -1,6 +1,6 @@
 use actix_web::web::Data;
 use actix_web::{middleware::Logger, App, HttpServer};
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use sqlx::SqlitePool;
 use std::env;
 use std::sync::Arc;

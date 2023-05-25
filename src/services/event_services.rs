@@ -156,7 +156,7 @@ impl<'a> VaderEvent<'a> for Event<'a, User> {
         participant: &Self::Participant,
         db_pool: &'a SqlitePool,
     ) -> AsyncDbRes<'a, ()> {
-        Self::add_participant_from_id(&self, participant.get_id(), db_pool)
+        Self::add_participant_from_id(self, participant.get_id(), db_pool)
     }
     fn add_participant_from_id(
         &'a self,
@@ -186,7 +186,7 @@ impl<'a> VaderEvent<'a> for Event<'a, User> {
                 id,
                 logo,
                 name,
-                "individual_event"
+                "user_event"
             )
             .execute(db_pool)
             .await?;
@@ -199,15 +199,6 @@ impl<'a> VaderEvent<'a> for Event<'a, User> {
 }
 
 impl<'a> Event<'a, User, ActiveEvent> {
-    pub fn update_score(
-        &self,
-        user: &User,
-        points: i64,
-        db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a, ()> {
-        let id = user.id;
-        Self::update_score_by_id(self, &id, points, db_pool)
-    }
     pub fn update_score_by_id(
         &self,
         user_id: &Uuid,
@@ -244,15 +235,6 @@ impl<'a> Event<'a, Team> {
 }
 
 impl<'a> Event<'a, Team, ActiveEvent> {
-    pub fn update_score(
-        &self,
-        team: &Team,
-        points: i64,
-        db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a, ()> {
-        let id = team.id;
-        Self::update_score_by_id(self, &id, points, db_pool)
-    }
     pub fn update_score_by_id(
         &self,
         team_id: &Uuid,
@@ -293,29 +275,29 @@ where
     }
 }
 
-impl<'a, T> Into<Event<'a, T, ActiveEvent>> for &Event<'a, T, NewEvent>
+impl<'a, T> From<&Event<'a, T, NewEvent>> for Event<'a, T, ActiveEvent>
 where
     T: Player<'a>,
 {
-    fn into(self) -> Event<'a, T, ActiveEvent> {
+    fn from(e: &Event<'a, T, NewEvent>) -> Self {
         Event {
-            id: self.id,
-            name: self.name.to_owned(),
-            logo: self.logo.to_owned(),
+            id: e.id,
+            name: e.name.to_owned(),
+            logo: e.logo.to_owned(),
             player_marker: PhantomData::<&'a T>,
             state_marker: PhantomData::<&'a ActiveEvent>,
         }
     }
 }
-impl<'a, T> Into<Event<'a, T, EndEvent>> for &Event<'a, T, ActiveEvent>
+impl<'a, T> From<&Event<'a, T, ActiveEvent>> for Event<'a, T, EndEvent>
 where
     T: Player<'a>,
 {
-    fn into(self) -> Event<'a, T, EndEvent> {
+    fn from(e: &Event<'a, T, ActiveEvent>) -> Self {
         Event {
-            id: self.id,
-            name: self.name.to_owned(),
-            logo: self.logo.to_owned(),
+            id: e.id,
+            name: e.name.to_owned(),
+            logo: e.logo.to_owned(),
             player_marker: PhantomData::<&'a T>,
             state_marker: PhantomData::<&'a EndEvent>,
         }

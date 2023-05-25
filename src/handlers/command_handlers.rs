@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
 use crate::models::{
-    handler_models::{ContestantInfo, CreationResponse, EventInfo, MemberInfo, ScoreUpdate},
-    v_models::{AppState, Event, EventStateWrapper, EventWrapper, Team, User, VaderEvent},
+    handler_models::{ContestantInfo, CreationResponse, EventReq, MemberInfo, ScoreUpdate},
+    query_models::EventType,
+    v_models::{AppState, Event, Team, User, VaderEvent},
+    wrapper_models::{EventStateWrapper, EventWrapper},
 };
 use actix_web::{post, web, Either, HttpResponse, Responder};
 use log::{debug, error, info};
@@ -10,30 +12,23 @@ use sqlx::SqlitePool;
 
 #[post("/event/add")]
 pub async fn add_event(
-    event_data: web::Json<EventInfo>,
+    event_data: web::Json<EventReq>,
     app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
 ) -> Either<impl Responder, impl Responder> {
     let event_data = event_data.into_inner();
     match event_data.event_type {
-        crate::models::handler_models::EventType::TeamEvent => {
-            Either::Left(add_team_event(event_data, app_state, db_pool).await)
-        }
-        crate::models::handler_models::EventType::UserEvent => {
-            Either::Right(add_user_event(event_data, app_state, db_pool).await)
-        }
+        EventType::TeamEvent => Either::Left(add_team_event(event_data, app_state, db_pool).await),
+        EventType::UserEvent => Either::Right(add_user_event(event_data, app_state, db_pool).await),
     }
 }
 
 pub async fn add_team_event(
-    event_info: EventInfo,
+    event_info: EventReq,
     app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
-    let mut event_state = app_state
-        .current_event
-        .lock()
-        .expect("Error getting current Event lock");
+    let mut event_state = app_state.current_event.lock().await;
     if event_state.is_some() {
         debug!("Request delined.Another Event already added.");
         return HttpResponse::BadRequest()
@@ -57,14 +52,11 @@ pub async fn add_team_event(
     }
 }
 pub async fn add_user_event(
-    event_info: EventInfo,
+    event_info: EventReq,
     app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
-    let mut event_state = app_state
-        .current_event
-        .lock()
-        .expect("Error getting current Event lock");
+    let mut event_state = app_state.current_event.lock().await;
     if event_state.is_some() {
         debug!("Request delined.Another Event already added.");
         return HttpResponse::BadRequest()
@@ -90,10 +82,7 @@ pub async fn add_user_event(
 
 #[post("/event/start")]
 pub async fn start_event(app_state: web::Data<Arc<AppState>>) -> impl Responder {
-    let mut event_state = app_state
-        .current_event
-        .lock()
-        .expect("Error getting current Event lock");
+    let mut event_state = app_state.current_event.lock().await;
     if event_state.is_none() {
         debug!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to start event")
@@ -114,10 +103,7 @@ pub async fn start_event(app_state: web::Data<Arc<AppState>>) -> impl Responder 
 }
 #[post("/event/stop")]
 pub async fn end_event(app_state: web::Data<Arc<AppState>>) -> impl Responder {
-    let mut event_state = app_state
-        .current_event
-        .lock()
-        .expect("Error getting current Event lock");
+    let mut event_state = app_state.current_event.lock().await;
     if event_state.is_none() {
         debug!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to start event")
@@ -144,10 +130,7 @@ pub async fn update_score(
     app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
-    let event_state = app_state
-        .current_event
-        .lock()
-        .expect("Error getting current Event lock");
+    let event_state = app_state.current_event.lock().await;
     if event_state.is_none() {
         debug!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to start event")
@@ -177,10 +160,7 @@ pub async fn add_team(
     app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
-    let event_state = app_state
-        .current_event
-        .lock()
-        .expect("Error getting current Event lock");
+    let event_state = app_state.current_event.lock().await;
     if event_state.is_none() {
         debug!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to start event")
@@ -211,10 +191,7 @@ pub async fn add_user(
     app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
-    let event_state = app_state
-        .current_event
-        .lock()
-        .expect("Error getting current Event lock");
+    let event_state = app_state.current_event.lock().await;
     if event_state.is_none() {
         debug!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to start event")
@@ -248,10 +225,7 @@ pub async fn add_team_members(
     app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
-    let event_state = app_state
-        .current_event
-        .lock()
-        .expect("Error getting current Event lock");
+    let event_state = app_state.current_event.lock().await;
     if event_state.is_none() {
         debug!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to start event")

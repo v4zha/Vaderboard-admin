@@ -3,6 +3,7 @@ use std::{error::Error, fmt::Display};
 #[derive(Debug)]
 pub enum VaderError<'a> {
     EventNotActive(&'a str),
+    #[allow(dead_code)]
     EventNotAdded(&'a str),
     EventEnded(&'a str),
     EventActive(&'a str),
@@ -10,6 +11,7 @@ pub enum VaderError<'a> {
     SqlxError(sqlx::Error),
     TeamNotFound(&'a str),
     UserNotFound(&'a str),
+    #[allow(dead_code)]
     TeamMemberNotFound(&'a str),
 }
 

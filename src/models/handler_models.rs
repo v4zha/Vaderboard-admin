@@ -1,28 +1,26 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::v_models::{Event, Team, User};
+use super::{
+    query_models::EventType,
+    v_models::{Event, Team, User},
+};
 
-#[derive(Deserialize)]
-pub enum EventType {
-    TeamEvent,
-    UserEvent,
-}
-#[derive(Deserialize)]
-pub struct EventInfo {
+#[derive(Deserialize, Serialize)]
+pub struct EventReq {
     name: String,
     #[serde(default)]
     logo: Option<String>,
     pub event_type: EventType,
 }
-impl Into<Event<'_, Team>> for EventInfo {
-    fn into(self) -> Event<'static, Team> {
-        Event::<Team>::new(self.name, self.logo)
+impl From<EventReq> for Event<'_, Team> {
+    fn from(req: EventReq) -> Self {
+        Event::<Team>::new(req.name, req.logo)
     }
 }
-impl Into<Event<'_, User>> for EventInfo {
-    fn into(self) -> Event<'static, User> {
-        Event::<User>::new(self.name, self.logo)
+impl From<EventReq> for Event<'_, User> {
+    fn from(req: EventReq) -> Self {
+        Event::<User>::new(req.name, req.logo)
     }
 }
 #[derive(Deserialize)]
@@ -38,14 +36,14 @@ pub struct ContestantInfo {
     logo: Option<String>,
 }
 
-impl Into<User> for ContestantInfo {
-    fn into(self) -> User {
-        User::new(self.name, self.logo)
+impl From<ContestantInfo> for User {
+    fn from(ci: ContestantInfo) -> User {
+        User::new(ci.name, ci.logo)
     }
 }
-impl Into<Team> for ContestantInfo {
-    fn into(self) -> Team {
-        Team::new(self.name, self.logo)
+impl From<ContestantInfo> for Team {
+    fn from(ci: ContestantInfo) -> Team {
+        Team::new(ci.name, ci.logo)
     }
 }
 

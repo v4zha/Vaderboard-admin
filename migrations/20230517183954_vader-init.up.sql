@@ -32,7 +32,8 @@ CREATE TABLE team_members (
     user_id UUID,
     PRIMARY KEY (team_id, user_id),
     FOREIGN KEY (team_id) REFERENCES teams (id),
-    FOREIGN KEY (user_id) REFERENCES users (id)
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    UNIQUE (user_id)
 );
 
 CREATE TABLE event_users (
