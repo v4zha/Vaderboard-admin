@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::models::{
-    handler_models::{ContestantInfo, CreationResponse, EventReq, MemberInfo, ScoreUpdate},
+    command_models::{ContestantInfo, CreationResponse, EventReq, MemberInfo, ScoreUpdate},
     query_models::EventType,
     v_models::{AppState, Event, Team, User, VaderEvent},
     wrapper_models::{EventStateWrapper, EventWrapper},

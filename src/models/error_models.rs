@@ -9,6 +9,7 @@ pub enum VaderError<'a> {
     EventActive(&'a str),
     EventTypeMismatch(&'a str),
     SqlxError(sqlx::Error),
+    SqlxFieldError(&'a str),
     TeamNotFound(&'a str),
     UserNotFound(&'a str),
     #[allow(dead_code)]
@@ -36,6 +37,7 @@ impl<'a> Display for VaderError<'a> {
                 e
             ),
             VaderError::SqlxError(e) => write!(f, "Sqlx Error.\n[error] : {}", e),
+            VaderError::SqlxFieldError(e) => write!(f, "Sqlx Field DecodeError.\n[error] : {}", e),
             VaderError::EventTypeMismatch(e) => write!(
                 f,
                 "Operation Cannot be performed on this Event Type.\n[error] : {}",

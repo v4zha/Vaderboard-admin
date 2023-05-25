@@ -12,6 +12,9 @@ mod services;
 use crate::handlers::command_handlers::{
     add_event, add_team, add_team_members, add_user, end_event, start_event, update_score,
 };
+use crate::handlers::query_handlers::{
+    get_current_event, get_event_info, get_team_info, get_user_info,
+};
 use crate::models::v_models::AppState;
 
 #[actix_web::main]
@@ -43,6 +46,10 @@ async fn main() -> std::io::Result<()> {
             .service(start_event)
             .service(update_score)
             .service(end_event)
+            .service(get_current_event)
+            .service(get_event_info)
+            .service(get_team_info)
+            .service(get_user_info)
     })
     .bind(host_port)?
     .run()

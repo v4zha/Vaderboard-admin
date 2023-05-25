@@ -72,7 +72,7 @@ impl<'a> Team {
             for mem_id in members {
                 let user_id = mem_id.to_string();
                 let res = sqlx::query!(
-                    "INSERT into team_members (team_id,user_id) VALUES (?,?)",
+                    "INSERT INTO team_members (team_id,user_id) VALUES (?,?)",
                     team_id,
                     user_id,
                 )
@@ -184,8 +184,8 @@ impl<'a> VaderEvent<'a> for Event<'a, User> {
             sqlx::query!(
                 "INSERT INTO events (id,name,logo,event_type) VALUES (?,?,?,?)",
                 id,
-                logo,
                 name,
+                logo,
                 "user_event"
             )
             .execute(db_pool)
@@ -314,6 +314,18 @@ impl Team {
             score: 0,
         }
     }
+    pub fn get_team<'a>(team_id: &'a Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, Self> {
+        let id = team_id.to_string();
+        Box::pin(async move {
+            let team = sqlx::query_as::<_, Team>(
+                "SELECT t.id AS id,t.name AS name, t.score AS score,t.logo AS logo,GROUP_CONCAT(tm.user_id,',') AS team_members FROM teams t JOIN team_members tm ON tm.team_id = t.id WHERE t.id = ? GROUP BY t.id",
+            )
+            .bind(id)
+            .fetch_one(db_pool)
+            .await?;
+            Ok(team)
+        })
+    }
 }
 impl User {
     pub fn new(name: String, logo: Option<String>) -> Self {
@@ -323,5 +335,16 @@ impl User {
             logo,
             score: 0,
         }
+    }
+    pub fn get_user<'a>(user_id: &'a Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, Self> {
+        let id = user_id.to_string();
+        Box::pin(async move {
+            let user =
+                sqlx::query_as::<_, User>("SELECT id,name,score,logo FROM users WHERE id = ?")
+                    .bind(id)
+                    .fetch_one(db_pool)
+                    .await?;
+            Ok(user)
+        })
     }
 }

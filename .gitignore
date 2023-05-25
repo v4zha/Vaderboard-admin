@@ -2,3 +2,4 @@
 .env
 vaderboard.db*
 test.sql
+test

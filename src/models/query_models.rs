@@ -12,6 +12,7 @@ pub struct EventQuery<'a, T: Player<'a>> {
     pub logo: Option<String>,
     pub contestants: Vec<T>,
     pub event_type: EventType,
+    #[serde(skip_serializing)]
     pub marker: PhantomData<&'a T>,
 }
 
@@ -24,4 +25,12 @@ pub enum EventType {
 #[derive(Deserialize)]
 pub struct IdQuery {
     pub id: Uuid,
+}
+
+#[derive(Serialize)]
+pub struct EventInfo {
+    pub id: Uuid,
+    pub name: String,
+    pub logo: Option<String>,
+    pub event_type: EventType,
 }

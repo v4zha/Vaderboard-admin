@@ -2,8 +2,8 @@ use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use super::{
+    command_models::MemberInfo,
     error_models::VaderError,
-    handler_models::MemberInfo,
     v_models::{
         ActiveEvent, AsyncDbRes, EndEvent, Event, NewEvent, Player, Team, User, VaderEvent,
     },

@@ -2,8 +2,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::{
-    query_models::EventType,
-    v_models::{Event, Team, User},
+    v_models::{Event, Team, User}, query_models::EventType,
 };
 
 #[derive(Deserialize, Serialize)]
