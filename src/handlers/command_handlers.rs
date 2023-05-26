@@ -1,13 +1,14 @@
 use std::sync::Arc;
 
 use crate::models::{
-    command_models::{ContestantInfo, CreationResponse, EventReq, MemberInfo, ScoreUpdate},
-    query_models::EventType,
+    command_models::{CommandResponse, ContestantInfo, EventReq, MemberInfo, ScoreUpdate},
+    error_models::VaderError,
+    query_models::{EventInfo, EventType, IdQuery},
     v_models::{AppState, Event, Team, User, VaderEvent},
     wrapper_models::{EventStateWrapper, EventWrapper},
 };
 use actix_web::{post, web, Either, HttpResponse, Responder};
-use log::{debug, error, info};
+use log::{error, info};
 use sqlx::SqlitePool;
 
 #[post("/event/add")]
@@ -30,7 +31,7 @@ pub async fn add_team_event(
 ) -> impl Responder {
     let mut event_state = app_state.current_event.lock().await;
     if event_state.is_some() {
-        debug!("Request delined.Another Event already added.");
+        error!("Request delined.Another Event already added.");
         return HttpResponse::BadRequest()
             .body("Another event already Added . Wait till the current Event ends");
     }
@@ -40,14 +41,14 @@ pub async fn add_team_event(
         Ok(_) => {
             info!("Successfully added team Event [id : {}]", event_id);
             *event_state = Some(EventWrapper::TeamEvent(EventStateWrapper::New(event)));
-            HttpResponse::Ok().json(web::Json(CreationResponse::new(
+            HttpResponse::Ok().json(web::Json(CommandResponse::new(
                 "Successfully added team event",
                 event_id,
             )))
         }
         Err(err) => {
             error!("Error adding Team event : {}", err.to_string());
-            HttpResponse::InternalServerError().finish()
+            HttpResponse::InternalServerError().body(err.to_string())
         }
     }
 }
@@ -58,7 +59,7 @@ pub async fn add_user_event(
 ) -> impl Responder {
     let mut event_state = app_state.current_event.lock().await;
     if event_state.is_some() {
-        debug!("Request delined.Another Event already added.");
+        error!("Request delined.Another Event already added.");
         return HttpResponse::BadRequest()
             .body("Another event already Added . Wait till the current Event ends");
     }
@@ -68,25 +69,37 @@ pub async fn add_user_event(
         Ok(_) => {
             info!("Successfully added user Event [id : {}]", event_id);
             *event_state = Some(EventWrapper::UserEvent(EventStateWrapper::New(event)));
-            HttpResponse::Ok().json(web::Json(CreationResponse::new(
+            HttpResponse::Ok().json(web::Json(CommandResponse::new(
                 "Successfully added user Event",
                 event_id,
             )))
         }
         Err(err) => {
             error!("Error adding User event : {}", err.to_string());
-            HttpResponse::InternalServerError().finish()
+            HttpResponse::InternalServerError().body(err.to_string())
         }
     }
 }
 
 #[post("/event/start")]
-pub async fn start_event(app_state: web::Data<Arc<AppState>>) -> impl Responder {
+pub async fn start_event(
+    app_state: web::Data<Arc<AppState>>,
+    db_pool: web::Data<SqlitePool>,
+) -> impl Responder {
     let mut event_state = app_state.current_event.lock().await;
     if event_state.is_none() {
-        debug!("Request delined.No event added");
+        error!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to start event")
     } else {
+        //reset score before starting event
+        let reset_res = event_state.as_ref().unwrap().reset_score(&db_pool).await;
+        if let Err(e) = reset_res {
+            error!("Error reseting score to start event");
+            return HttpResponse::BadRequest().body(format!(
+                "Error resetting score to starte event.\n{}",
+                e.to_string()
+            ));
+        }
         let res = event_state.as_mut().unwrap().start_event();
         match res {
             Ok(_) => {
@@ -105,7 +118,7 @@ pub async fn start_event(app_state: web::Data<Arc<AppState>>) -> impl Responder 
 pub async fn end_event(app_state: web::Data<Arc<AppState>>) -> impl Responder {
     let mut event_state = app_state.current_event.lock().await;
     if event_state.is_none() {
-        debug!("Request delined.No event added");
+        error!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to start event")
     } else {
         let res = event_state.as_mut().unwrap().end_event();
@@ -132,7 +145,7 @@ pub async fn update_score(
 ) -> impl Responder {
     let event_state = app_state.current_event.lock().await;
     if event_state.is_none() {
-        debug!("Request delined.No event added");
+        error!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to start event")
     } else {
         let sr = score_req.into_inner();
@@ -147,13 +160,35 @@ pub async fn update_score(
                 HttpResponse::Ok().body("Score updated successfully")
             }
             Err(err) => {
-                debug!("Error updating score :\n[error] : {}", err);
+                error!("Error updating score :\n[error] : {}", err);
                 HttpResponse::BadRequest().body(format!("Error updating Score : \n{}", err))
             }
         }
     }
 }
-// ippol participants um contestants um onnaaan : )
+#[post("/score/reset")]
+pub async fn reset_score(
+    app_state: web::Data<Arc<AppState>>,
+    db_pool: web::Data<SqlitePool>,
+) -> impl Responder {
+    let event_state = app_state.current_event.lock().await;
+    if event_state.is_none() {
+        error!("Request delined.No event added");
+        HttpResponse::BadRequest().body("No event added.Add event to start event")
+    } else {
+        let res = event_state.as_ref().unwrap().reset_score(&db_pool).await;
+        match res {
+            Ok(_) => {
+                info!("Score Reset successful");
+                HttpResponse::Ok().body("Score reset successful")
+            }
+            Err(err) => {
+                error!("Error resetting score :\n[error] : {}", err);
+                HttpResponse::BadRequest().body(format!("Error resetting Score : \n{}", err))
+            }
+        }
+    }
+}
 #[post("/event/team/add")]
 pub async fn add_team(
     c_info: web::Json<ContestantInfo>,
@@ -162,7 +197,7 @@ pub async fn add_team(
 ) -> impl Responder {
     let event_state = app_state.current_event.lock().await;
     if event_state.is_none() {
-        debug!("Request delined.No event added");
+        error!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to start event")
     } else {
         let team = Into::<Team>::into(c_info.into_inner());
@@ -170,21 +205,20 @@ pub async fn add_team(
         let res = event_state.as_ref().unwrap().add_team(team, &db_pool).await;
         match res {
             Ok(_) => {
-                info!("Team  added successfully");
-                HttpResponse::Ok().json(web::Json(CreationResponse::new(
+                info!("Team  added successfully : {}", team_id);
+                HttpResponse::Ok().json(web::Json(CommandResponse::new(
                     "Team added successfully",
                     team_id,
                 )))
             }
             Err(err) => {
-                debug!("Error adding Team :\n[error] : {}", err);
-                HttpResponse::BadRequest().body("Error adding Team")
+                error!("Error adding Team :\n[error] : {}", err);
+                HttpResponse::BadRequest().body(err.to_string())
             }
         }
     }
 }
 
-// ippol participants um contestants um onnaaan : )
 #[post("/event/user/add/")]
 pub async fn add_user(
     c_info: web::Json<ContestantInfo>,
@@ -193,7 +227,7 @@ pub async fn add_user(
 ) -> impl Responder {
     let event_state = app_state.current_event.lock().await;
     if event_state.is_none() {
-        debug!("Request delined.No event added");
+        error!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to start event")
     } else {
         let user = Into::<User>::into(c_info.into_inner());
@@ -205,14 +239,14 @@ pub async fn add_user(
             .await;
         match res {
             Ok(_) => {
-                info!("User  added successfully");
-                HttpResponse::Ok().json(web::Json(CreationResponse::new(
+                info!("User  added successfully : {}", user_id);
+                HttpResponse::Ok().json(web::Json(CommandResponse::new(
                     "User added successfully",
                     user_id,
                 )))
             }
             Err(err) => {
-                debug!("Error adding User :\n[error] : {}", err);
+                error!("Error adding User :\n[error] : {}", err);
                 HttpResponse::BadRequest().body("Error adding User")
             }
         }
@@ -227,7 +261,7 @@ pub async fn add_team_members(
 ) -> impl Responder {
     let event_state = app_state.current_event.lock().await;
     if event_state.is_none() {
-        debug!("Request delined.No event added");
+        error!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to start event")
     } else {
         let mi = m_info.into_inner();
@@ -242,9 +276,103 @@ pub async fn add_team_members(
                 HttpResponse::Ok().body("Team Members added successfully")
             }
             Err(err) => {
-                debug!("Error adding Team Members:\n[error] : {}", err);
+                error!("Error adding Team Members:\n[error] : {}", err);
                 HttpResponse::BadRequest().body(format!("Error adding Team Members : {}", err))
             }
+        }
+    }
+}
+
+#[post("/event/delete")]
+pub async fn delete_event(
+    db_pool: web::Data<SqlitePool>,
+    app_state: web::Data<Arc<AppState>>,
+    id_info: web::Json<IdQuery>,
+) -> impl Responder {
+    let id = id_info.into_inner().id;
+    let event_state = app_state.current_event.lock().await;
+    if let Some(e) = event_state.as_ref() {
+        let event_id = e.get_id();
+        if event_id.eq(&id) {
+            return HttpResponse::BadRequest().body(
+                VaderError::EventActive(
+                    "Unable to remove Event i.e currently Added/Active.Stop the event to remove",
+                )
+                .to_string(),
+            );
+        }
+    }
+    let info_res: Result<EventInfo, VaderError> = EventInfo::get_event_info(&id, &db_pool).await;
+    let res = match info_res {
+        Ok(event) => match event.event_type {
+            EventType::TeamEvent => Event::<Team>::delete_event(&id, &db_pool).await,
+            EventType::UserEvent => Event::<User>::delete_event(&id, &db_pool).await,
+        },
+        Err(e) => {
+            let err = format!("unable to get event info\n.{}", e);
+            error!("{}", err);
+            return HttpResponse::BadRequest().body(err);
+        }
+    };
+    match res {
+        Ok(_) => {
+            info!("Successfully deleted event : {}", id);
+            HttpResponse::Ok().json(web::Json(CommandResponse::new(
+                "Successfully deleted event",
+                id,
+            )))
+        }
+        Err(e) => {
+            let err = format!("Error Deleting event : {}.\n{}", id, e.to_string());
+            error!("{}", err);
+            HttpResponse::BadRequest().body(err)
+        }
+    }
+}
+
+#[post("/team/delete")]
+pub async fn delete_team(
+    db_pool: web::Data<SqlitePool>,
+    id_info: web::Json<IdQuery>,
+) -> impl Responder {
+    let id = id_info.into_inner().id;
+    let res = Team::delete_team(&id, &db_pool).await;
+    match res {
+        Ok(_) => {
+            info!("Successfully deleted team : {}", id);
+            HttpResponse::Ok().json(web::Json(CommandResponse::new(
+                "Successfully deleted team ",
+                id,
+            )))
+        }
+
+        Err(e) => {
+            let err = format!("Error Deleting team : {}.\n{}", id, e.to_string());
+            error!("{}", err);
+            HttpResponse::BadRequest().body(err)
+        }
+    }
+}
+
+#[post("/user/delete")]
+pub async fn delete_user(
+    db_pool: web::Data<SqlitePool>,
+    id_info: web::Json<IdQuery>,
+) -> impl Responder {
+    let id = id_info.into_inner().id;
+    let res = User::delete_user(&id, &db_pool).await;
+    match res {
+        Ok(_) => {
+            info!("Successfully deleted user : {}", id);
+            HttpResponse::Ok().json(web::Json(CommandResponse::new(
+                "Successfully deleted user",
+                id,
+            )))
+        }
+        Err(e) => {
+            let err = format!("Error Deleting user : {}.\n{}", id, e.to_string());
+            error!("{}", err);
+            HttpResponse::BadRequest().body(err)
         }
     }
 }

@@ -3,17 +3,14 @@ use std::{error::Error, fmt::Display};
 #[derive(Debug)]
 pub enum VaderError<'a> {
     EventNotActive(&'a str),
-    #[allow(dead_code)]
-    EventNotAdded(&'a str),
     EventEnded(&'a str),
     EventActive(&'a str),
     EventTypeMismatch(&'a str),
     SqlxError(sqlx::Error),
     SqlxFieldError(&'a str),
+    EventNotFound(&'a str),
     TeamNotFound(&'a str),
     UserNotFound(&'a str),
-    #[allow(dead_code)]
-    TeamMemberNotFound(&'a str),
 }
 
 impl<'a> From<sqlx::Error> for VaderError<'a> {
@@ -23,14 +20,11 @@ impl<'a> From<sqlx::Error> for VaderError<'a> {
 }
 impl<'a> Error for VaderError<'a> {}
 
+impl<'a> actix_web::ResponseError for VaderError<'a> {}
+
 impl<'a> Display for VaderError<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            VaderError::EventNotAdded(e) => write!(
-                f,
-                "No Added Event Available for operation.\n[error] :  {}",
-                e
-            ),
             VaderError::EventNotActive(e) => write!(
                 f,
                 "No Event is Active to perform operation.\n[error] :  {}",
@@ -53,11 +47,9 @@ impl<'a> Display for VaderError<'a> {
                 "Operation Cannot be performed on Event that Ended.\n[error] : {}",
                 e
             ),
+            VaderError::EventNotFound(e) => write!(f, "Event not Found.\n[error] : {}", e),
             VaderError::TeamNotFound(e) => write!(f, "Team not Found.\n[error] : {}", e),
             VaderError::UserNotFound(e) => write!(f, "User not Found.\n[error] : {}", e),
-            VaderError::TeamMemberNotFound(e) => {
-                write!(f, "TeamMember not Found.\n[error] : {}", e)
-            }
         }
     }
 }

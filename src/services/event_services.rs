@@ -258,6 +258,27 @@ impl<'a> Event<'a, Team, ActiveEvent> {
         })
     }
 }
+
+impl<'a> Event<'a, Team, NewEvent> {
+    pub fn reset_score(&self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
+        let event_id = self.id.to_string();
+        Box::pin(async move {
+            sqlx::query!("UPDATE teams SET score=0 WHERE id IN(SELECT t.id FROM events e JOIN event_teams et ON et.event_id = e.id JOIN teams t ON et.team_id = t.id WHERE e.id = ?)",event_id).execute(db_pool).await?;
+            sqlx::query!("UPDATE users SET score=0 WHERE id IN(SELECT u.id FROM events e JOIN event_teams et ON et.event_id = e.id JOIN teams t ON et.team_id = t.id JOIN team_members tm ON tm.team_id = t.id JOIN users u ON tm.user_id = u.id WHERE e.id = ? )",event_id).execute(db_pool).await?;
+            Ok(())
+        })
+    }
+}
+impl<'a> Event<'a, User, NewEvent> {
+    pub fn reset_score(&self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
+        let event_id = self.id.to_string();
+        Box::pin(async move {
+            sqlx::query!("UPDATE users SET score=0 WHERE id IN(SELECT u.id FROM events e JOIN event_users eu ON eu.event_id = e.id JOIN users u ON eu.user_id = u.id WHERE e.id = ?)",event_id).execute(db_pool).await?;
+            Ok(())
+        })
+    }
+}
+
 impl<'a, T> Event<'a, T, NewEvent>
 where
     T: Player<'a>,
@@ -266,6 +287,7 @@ where
         Into::<Event<'a, T, ActiveEvent>>::into(self)
     }
 }
+
 impl<'a, T> Event<'a, T, ActiveEvent>
 where
     T: Player<'a>,
@@ -326,6 +348,18 @@ impl Team {
             Ok(team)
         })
     }
+    pub fn delete_team<'a>(id: &Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
+        let id = id.to_string();
+        Box::pin(async move {
+            let res = sqlx::query!("DELETE FROM teams WHERE id = ? ", id)
+                .execute(db_pool)
+                .await?;
+            if res.rows_affected().eq(&0) {
+                return Err(VaderError::TeamNotFound("No team found"));
+            }
+            Ok(())
+        })
+    }
 }
 impl User {
     pub fn new(name: String, logo: Option<String>) -> Self {
@@ -345,6 +379,18 @@ impl User {
                     .fetch_one(db_pool)
                     .await?;
             Ok(user)
+        })
+    }
+    pub fn delete_user<'a>(id: &'a Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
+        let id = id.to_string();
+        Box::pin(async move {
+            let res = sqlx::query!("DELETE FROM users WHERE id = ? ", id)
+                .execute(db_pool)
+                .await?;
+            if res.rows_affected().eq(&0) {
+                return Err(VaderError::UserNotFound("No User found"));
+            }
+            Ok(())
         })
     }
 }

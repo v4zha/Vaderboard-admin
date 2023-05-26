@@ -10,7 +10,8 @@ mod models;
 mod services;
 
 use crate::handlers::command_handlers::{
-    add_event, add_team, add_team_members, add_user, end_event, start_event, update_score,
+    add_event, add_team, add_team_members, add_user, delete_event, delete_team, delete_user,
+    end_event, reset_score, start_event, update_score,
 };
 use crate::handlers::query_handlers::{
     get_current_event, get_event_info, get_team_info, get_user_info,
@@ -45,11 +46,15 @@ async fn main() -> std::io::Result<()> {
             .service(add_team_members)
             .service(start_event)
             .service(update_score)
+            .service(reset_score)
             .service(end_event)
             .service(get_current_event)
             .service(get_event_info)
             .service(get_team_info)
             .service(get_user_info)
+            .service(delete_event)
+            .service(delete_team)
+            .service(delete_user)
     })
     .bind(host_port)?
     .run()

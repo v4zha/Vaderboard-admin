@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::{
-    v_models::{Event, Team, User}, query_models::EventType,
+    query_models::EventType,
+    v_models::{Event, Team, User},
 };
 
 #[derive(Deserialize, Serialize)]
@@ -47,11 +48,11 @@ impl From<ContestantInfo> for Team {
 }
 
 #[derive(Serialize)]
-pub struct CreationResponse<'a> {
+pub struct CommandResponse<'a> {
     msg: &'a str,
     id: Uuid,
 }
-impl<'a> CreationResponse<'a> {
+impl<'a> CommandResponse<'a> {
     pub fn new(msg: &'a str, id: Uuid) -> Self {
         Self { msg, id }
     }

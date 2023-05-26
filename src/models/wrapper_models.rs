@@ -97,6 +97,26 @@ impl<'a> EventWrapper<'a> {
             },
         }
     }
+    pub fn reset_score(&self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
+        match self {
+            Self::TeamEvent(sw) => match sw {
+                EventStateWrapper::New(e) => e.reset_score(db_pool),
+                _ => Box::pin(async move {
+                    Err(VaderError::EventTypeMismatch(
+                        "Unable to reset score , Event may have already started / ended.",
+                    ))
+                }),
+            },
+            Self::UserEvent(sw) => match sw {
+                EventStateWrapper::New(e) => e.reset_score(db_pool),
+                _ => Box::pin(async move {
+                    Err(VaderError::EventTypeMismatch(
+                        "Unable to reset score , Event may have already started / ended.",
+                    ))
+                }),
+            },
+        }
+    }
     pub fn add_team(&self, team: Team, db_pool: &'a SqlitePool) -> AsyncDbRes<()> {
         match self {
             Self::TeamEvent(sw) => match sw {

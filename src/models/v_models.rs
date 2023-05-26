@@ -91,4 +91,16 @@ impl<'a, T: Player<'a>, U: EventState> Event<'a, T, U> {
             state_marker: PhantomData::<&'a U>,
         }
     }
+    pub fn delete_event(id: &'a Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
+        let id = id.to_string();
+        Box::pin(async move {
+            let res = sqlx::query!("DELETE FROM events WHERE id = ? ", id)
+                .execute(db_pool)
+                .await?;
+            if res.rows_affected().eq(&0) {
+                return Err(VaderError::EventNotFound("No event found"));
+            }
+            Ok(())
+        })
+    }
 }
