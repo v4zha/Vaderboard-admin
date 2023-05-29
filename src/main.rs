@@ -24,7 +24,7 @@ use crate::handlers::query_handlers::{
 };
 use crate::models::v_models::AppState;
 use crate::services::v_middlewares::AdminOnlyGuard;
-
+use actix_files::Files;
 fn admin_setup() -> AdminInfo {
     let uname: String =
         env::var("ADMIN_USERNAME").expect("Error Reading ADMIN_USERNAME Env Variable");
@@ -54,6 +54,7 @@ async fn main() -> std::io::Result<()> {
     let app_state = Arc::new(AppState::new());
     HttpServer::new(move || {
         App::new()
+            .service(Files::new("/","dist").index_file("index.html"))
             .wrap(Logger::default())
             .wrap(SessionMiddleware::new(
                 CookieSessionStore::default(),

@@ -19,6 +19,7 @@ futures = "0.3.28"
 erased-serde = "0.3.25"
 tokio = { version = "1.28.1", features = ["full"] }
 actix-session = { version = "0.7.2", features = ["cookie-session"] }
+actix-files = "0.6.2"
 
 [build-dependencies]
 sqlx = { version = "0.6.3", features = ["sqlite", "runtime-actix-native-tls"] }
