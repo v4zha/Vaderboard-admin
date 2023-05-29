@@ -111,7 +111,7 @@ impl<'a> EventWrapper<'a> {
                 EventStateWrapper::New(e) => e.reset_score(db_pool),
                 _ => Box::pin(async move {
                     Err(VaderError::EventTypeMismatch(
-                        "Unable to reset score , Event may have already started / ended.",
+                        "Event is not active to Update Score",
                     ))
                 }),
             },

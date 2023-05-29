@@ -1,15 +1,16 @@
-use std::sync::Arc;
-
 use crate::models::{
     command_models::{CommandResponse, ContestantInfo, EventReq, MemberInfo, ScoreUpdate},
     error_models::VaderError,
     query_models::{EventInfo, EventType, IdQuery},
-    v_models::{AppState, Event, Team, User, VaderEvent},
+    v_models::{AdminInfo, AppState, Event, Team, User, VaderEvent},
     wrapper_models::{EventStateWrapper, EventWrapper},
 };
+use crate::ADMIN_CRED;
+use actix_session::Session;
 use actix_web::{post, web, Either, HttpResponse, Responder};
 use log::{error, info};
 use sqlx::SqlitePool;
+use std::sync::Arc;
 
 #[post("/event/add")]
 pub async fn add_event(
@@ -374,5 +375,22 @@ pub async fn delete_user(
             error!("{}", err);
             HttpResponse::BadRequest().body(err)
         }
+    }
+}
+
+#[post("/login")]
+pub async fn login(session: Session, login_info: web::Json<AdminInfo>) -> impl Responder {
+    let login = login_info.into_inner();
+    if ADMIN_CRED.eq(&login) {
+        if session.insert("admin", true).is_ok() {
+            log::debug!("Login Successful : )");
+            HttpResponse::Ok().body("Login Successful")
+        } else {
+            log::debug!("Unable to get Admin Session");
+            HttpResponse::InternalServerError().finish()
+        }
+    } else {
+        log::debug!("Invalid UserName/Password");
+        HttpResponse::Unauthorized().body("Invalid UserName/Password")
     }
 }

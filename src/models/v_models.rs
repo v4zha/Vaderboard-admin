@@ -63,6 +63,19 @@ pub struct Event<'a, T: Player<'a>, U: EventState = NewEvent> {
     pub state_marker: PhantomData<&'a U>,
 }
 
+#[derive(Deserialize, PartialEq, Eq)]
+//waring : Unsafe authentication method used : )
+// production il upayogikkaruth : )
+pub struct AdminInfo {
+    pub uname: String,
+    pub passwd: String,
+}
+impl AdminInfo {
+    pub fn new(uname: String, passwd: String) -> Self {
+        Self { uname, passwd }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Team {
     pub id: Uuid,
