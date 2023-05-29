@@ -44,7 +44,6 @@ async fn main() -> std::io::Result<()> {
     let app_state = Arc::new(AppState::new());
     HttpServer::new(move || {
         App::new()
-            .service(Files::new("/", "dist").index_file("index.html"))
             .wrap(Logger::default())
             .wrap(SessionMiddleware::new(
                 CookieSessionStore::default(),
@@ -72,6 +71,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_current_event)
             .service(get_event_info)
             .service(get_team_info)
+            .service(Files::new("/", "dist").index_file("index.html"))
     })
     .bind(host_port)?
     .run()
