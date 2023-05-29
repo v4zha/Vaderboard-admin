@@ -13,7 +13,6 @@ pub enum VaderError<'a> {
     EventNotFound(&'a str),
     TeamNotFound(&'a str),
     UserNotFound(&'a str),
-    AdminLoginError(&'a str),
     AdminHashError(BcryptError),
 }
 
@@ -60,7 +59,6 @@ impl<'a> Display for VaderError<'a> {
             VaderError::EventNotFound(e) => write!(f, "Event not Found.\n[error] : {}", e),
             VaderError::TeamNotFound(e) => write!(f, "Team not Found.\n[error] : {}", e),
             VaderError::UserNotFound(e) => write!(f, "User not Found.\n[error] : {}", e),
-            VaderError::AdminLoginError(e) => write!(f, "Admin Login Error.\n[error] : {}", e),
             VaderError::AdminHashError(e) => write!(f, "Admin Hash Error.\n[error] : {}", e.to_string()),
         }
     }

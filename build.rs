@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use bcrypt::{hash, DEFAULT_COST};
 use dotenvy::dotenv;
 use sqlx::migrate::MigrateDatabase;

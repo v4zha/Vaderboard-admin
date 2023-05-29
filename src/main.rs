@@ -4,7 +4,7 @@ use actix_web::cookie::Key;
 use actix_web::web::{self, Data};
 use actix_web::{middleware::Logger, App, HttpServer};
 use dotenvy::dotenv;
-use models::v_models::AdminInfo;
+
 use sqlx::SqlitePool;
 use std::env;
 use std::sync::Arc;
