@@ -1,8 +1,5 @@
-function App() {
+const App = () => {
+    return <h1>VaderBoard Admin Panel</h1>;
+};
 
-  return (
-  <h1>VaderBoard Admin Panel</h1>
-  )
-}
-
-export default App
+export default App;

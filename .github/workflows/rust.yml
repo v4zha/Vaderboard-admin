@@ -1,11 +1,10 @@
-name: VaderBoard build 
+name: VaderBoard build
 
 on:
   push:
     branches:
       - main
   pull_request:
-
     branches:
       - main
 
@@ -22,15 +21,20 @@ jobs:
         with:
           toolchain: stable
           override: true
+
       - name: Cache Rust dependencies
         uses: actions/cache@v2
         with:
           path: ~/.cargo
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
           restore-keys: |
             ${{ runner.os }}-cargo-
 
       - name: Build and test
-        run: cargo build --all --verbose && cargo test --all --verbose
-
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          cargo build --all --verbose
+          cargo test --all --verbose
