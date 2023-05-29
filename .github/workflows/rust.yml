@@ -20,9 +20,8 @@ jobs:
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
-
-          profile: minimal
-
+          toolchain: stable
+          override: true
       - name: Cache Rust dependencies
         uses: actions/cache@v2
         with:
