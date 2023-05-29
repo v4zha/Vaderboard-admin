@@ -1,5 +1,7 @@
 use std::{error::Error, fmt::Display};
 
+use bcrypt::BcryptError;
+
 #[derive(Debug)]
 pub enum VaderError<'a> {
     EventNotActive(&'a str),
@@ -11,6 +13,8 @@ pub enum VaderError<'a> {
     EventNotFound(&'a str),
     TeamNotFound(&'a str),
     UserNotFound(&'a str),
+    AdminLoginError(&'a str),
+    AdminHashError(BcryptError),
 }
 
 impl<'a> From<sqlx::Error> for VaderError<'a> {
@@ -18,6 +22,12 @@ impl<'a> From<sqlx::Error> for VaderError<'a> {
         Self::SqlxError(value)
     }
 }
+impl<'a> From<BcryptError> for VaderError<'a> {
+    fn from(value: BcryptError) -> Self {
+        Self::AdminHashError(value)
+    }
+}
+
 impl<'a> Error for VaderError<'a> {}
 
 impl<'a> actix_web::ResponseError for VaderError<'a> {}
@@ -50,6 +60,8 @@ impl<'a> Display for VaderError<'a> {
             VaderError::EventNotFound(e) => write!(f, "Event not Found.\n[error] : {}", e),
             VaderError::TeamNotFound(e) => write!(f, "Team not Found.\n[error] : {}", e),
             VaderError::UserNotFound(e) => write!(f, "User not Found.\n[error] : {}", e),
+            VaderError::AdminLoginError(e) => write!(f, "Admin Login Error.\n[error] : {}", e),
+            VaderError::AdminHashError(e) => write!(f, "Admin Hash Error.\n[error] : {}", e.to_string()),
         }
     }
 }

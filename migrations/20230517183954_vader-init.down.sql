@@ -5,4 +5,4 @@ DROP TABLE event_users;
 DROP TABLE users;
 DROP TABLE teams;
 DROP TABLE events;
-
+DROP TABLE admin_login;

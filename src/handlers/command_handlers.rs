@@ -5,7 +5,6 @@ use crate::models::{
     v_models::{AdminInfo, AppState, Event, Team, User, VaderEvent},
     wrapper_models::{EventStateWrapper, EventWrapper},
 };
-use crate::ADMIN_CRED;
 use actix_session::Session;
 use actix_web::{post, web, Either, HttpResponse, Responder};
 use log::{error, info};
@@ -379,18 +378,29 @@ pub async fn delete_user(
 }
 
 #[post("/login")]
-pub async fn login(session: Session, login_info: web::Json<AdminInfo>) -> impl Responder {
+pub async fn login(
+    session: Session,
+    login_info: web::Json<AdminInfo>,
+    db_pool: web::Data<SqlitePool>,
+) -> impl Responder {
     let login = login_info.into_inner();
-    if ADMIN_CRED.eq(&login) {
-        if session.insert("admin", true).is_ok() {
-            log::debug!("Login Successful : )");
-            HttpResponse::Ok().body("Login Successful")
-        } else {
-            log::debug!("Unable to get Admin Session");
+    match login.is_admin(&db_pool).await {
+        Ok(true) => {
+            if session.insert("admin", true).is_ok() {
+                log::debug!("Login Successful : )");
+                HttpResponse::Ok().body("Login Successful")
+            } else {
+                log::debug!("Unable to get Admin Session");
+                HttpResponse::InternalServerError().finish()
+            }
+        }
+        Ok(false) => {
+            log::debug!("Invalid UserName/Password");
+            HttpResponse::Unauthorized().body("Invalid UserName/Password")
+        }
+        Err(e) => {
+            log::debug!("Admin Auth error : {}", e.to_string());
             HttpResponse::InternalServerError().finish()
         }
-    } else {
-        log::debug!("Invalid UserName/Password");
-        HttpResponse::Unauthorized().body("Invalid UserName/Password")
     }
 }

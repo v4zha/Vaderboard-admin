@@ -44,3 +44,8 @@ CREATE TABLE event_users (
     FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE
 );
 
+CREATE TABLE admin_login (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE,
+    password TEXT
+);

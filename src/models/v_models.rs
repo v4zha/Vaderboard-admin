@@ -1,5 +1,6 @@
+use bcrypt::verify;
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
+use sqlx::{FromRow, SqlitePool};
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
@@ -63,16 +64,22 @@ pub struct Event<'a, T: Player<'a>, U: EventState = NewEvent> {
     pub state_marker: PhantomData<&'a U>,
 }
 
-#[derive(Deserialize, PartialEq, Eq)]
-//waring : Unsafe authentication method used : )
-// production il upayogikkaruth : )
+#[derive(Deserialize, FromRow)]
 pub struct AdminInfo {
-    pub uname: String,
-    pub passwd: String,
+    pub username: String,
+    pub password: String,
 }
 impl AdminInfo {
-    pub fn new(uname: String, passwd: String) -> Self {
-        Self { uname, passwd }
+    pub fn is_admin<'a>(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, bool> {
+        Box::pin(async move {
+            let res = sqlx::query_as::<_, Self>(
+                "SELECT username,password FROM admin_login WHERE username = ?",
+            )
+            .bind(&self.username)
+            .fetch_one(db_pool)
+            .await?;
+            Ok(verify(&self.password, &res.password)?)
+        })
     }
 }
 
