@@ -9,14 +9,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Running Vaderboard Build script : )");
     //VaderBoard database setup
     println!("Running Database Setup");
-    let db_url = env::var("DATABASE_URL")?;
-    if !Sqlite::database_exists(&db_url).await? {
+    let db_url = env::var("DATABASE_URL").expect("Error DATABASE_URL env variable not set");
+    if !Sqlite::database_exists(&db_url)
+        .await
+        .expect("Unable to fetch database existance details")
+    {
         println!("Creating Vaderboard database");
-        Sqlite::create_database(&db_url).await?;
+        Sqlite::create_database(&db_url)
+            .await
+            .expect("Unable to create database");
     }
-    let pool = SqlitePool::connect(&db_url).await?;
+    let pool = SqlitePool::connect(&db_url).await.expect("Unable to Connect to Database");
     println!("Running Vaderboard Migrations");
-    sqlx::migrate!().run(&pool).await?;
+    sqlx::migrate!().run(&pool).await.expect("Unable to run Db migrations");
 
     //Vite build setup
     println!("Running vader-admin-ui Build");
