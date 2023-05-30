@@ -48,10 +48,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .expect("Unable to run Db migrations");
 
+    //workflow debug
+    println!("Db url : {}", db_url);
     //add Admin Login to DB
     println!("Adding Admin cred to db");
     let uname = env::var("ADMIN_USERNAME").expect("Error ADMIN_USERNAME env variable not set");
     let pass = env::var("ADMIN_PASSWORD").expect("Error ADMIN_PASSWORD env variable not set");
+    println!("Admin Uname : {}", uname);
+    println!("Admin Passwd : {}", pass);
     add_admin(uname, pass, pool).await?;
     println!("Successfully registered admin cred");
 

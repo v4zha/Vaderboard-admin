@@ -36,5 +36,5 @@ jobs:
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
         run: |
-          cargo build --all --verbose
+          cargo build --all -vv
           cargo test --all --verbose
