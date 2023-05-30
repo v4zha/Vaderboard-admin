@@ -1,11 +1,13 @@
 use std::marker::PhantomData;
 
+use actix::Actor;
+use actix_web_actors::ws;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Row, SqlitePool};
 use uuid::Uuid;
 
 use crate::models::error_models::VaderError;
-use crate::models::query_models::{EventInfo, EventQuery, EventType};
+use crate::models::query_models::{EventInfo, EventQuery, EventType, FtsQuery};
 use crate::models::v_models::{AsyncDbRes, Event, EventState, Player, Team, User};
 impl FromRow<'_, SqliteRow> for Team {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
@@ -182,4 +184,82 @@ impl EventInfo {
             Ok(event)
         })
     }
+}
+
+pub trait Queriable {
+    type QueryRes;
+    fn fts_query<'a>(
+        param: &'a str,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a, Vec<Self::QueryRes>>;
+}
+impl Queriable for Team {
+    type QueryRes = Self;
+    fn fts_query<'a>(
+        param: &'a str,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a, Vec<Self::QueryRes>> {
+        Box::pin(async move {
+            let teams = sqlx::query_as::<_, Team>(
+                "SELECT id,name,score,logo FROM teams_fts WHERE name MATCH '{}*'",
+            )
+            .bind(param)
+            .fetch_all(db_pool)
+            .await?;
+            Ok(teams)
+        })
+    }
+}
+impl Queriable for User {
+    type QueryRes = Self;
+    fn fts_query<'a>(
+        param: &'a str,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a, Vec<Self::QueryRes>> {
+        Box::pin(async move {
+            let users = sqlx::query_as::<_, User>(
+                "SELECT id,name,score,logo FROM users_fts WHERE name MATCH '{}*'",
+            )
+            .bind(param)
+            .fetch_all(db_pool)
+            .await?;
+            Ok(users)
+        })
+    }
+}
+impl Queriable for EventInfo {
+    type QueryRes = Self;
+    fn fts_query<'a>(
+        param: &'a str,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a, Vec<Self::QueryRes>> {
+        Box::pin(async move {
+            let events = sqlx::query_as::<_, EventInfo>(
+                "SELECT id,name,logo,event_type FROM events_fts WHERE name MATCH '{}*'",
+            )
+            .bind(param)
+            .fetch_all(db_pool)
+            .await?;
+            Ok(events)
+        })
+    }
+}
+
+impl<'a, 'b> Actor for FtsQuery<'a, 'b, Team>
+where
+    'a: 'static,
+{
+    type Context = ws::WebsocketContext<Self>;
+}
+impl<'a, 'b> Actor for FtsQuery<'a, 'b, User>
+where
+    'a: 'static,
+{
+    type Context = ws::WebsocketContext<Self>;
+}
+impl<'a, 'b> Actor for FtsQuery<'a, 'b, EventInfo>
+where
+    'a: 'static,
+{
+    type Context = ws::WebsocketContext<Self>;
 }

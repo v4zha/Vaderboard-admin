@@ -62,3 +62,12 @@ pub async fn get_user_info(
         Err(e) => HttpResponse::BadRequest().body(e.to_string()),
     }
 }
+
+#[get("/events/fts")]
+pub async fn events_fts(db_pool: web::Data<SqlitePool>, steam: web::Payload) -> impl Responder {}
+
+#[get("/team/fts")]
+pub async fn team_fts(db_pool: web::Data<SqlitePool>, steam: web::Payload) -> impl Responder {}
+
+#[get("/users/fts")]
+pub async fn users_fts(db_pool: web::Data<SqlitePool>, steam: web::Payload) -> impl Responder {}
