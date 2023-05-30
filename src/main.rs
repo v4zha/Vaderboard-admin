@@ -1,17 +1,20 @@
+use std::env;
+use std::sync::Arc;
+
 use actix_session::storage::CookieSessionStore;
 use actix_session::SessionMiddleware;
 use actix_web::cookie::Key;
+use actix_web::middleware::Logger;
 use actix_web::web::{self, Data};
-use actix_web::{middleware::Logger, App, HttpServer};
+use actix_web::{App, HttpServer};
 use dotenvy::dotenv;
-
 use sqlx::SqlitePool;
-use std::env;
-use std::sync::Arc;
 
 mod handlers;
 mod models;
 mod services;
+
+use actix_files::Files;
 
 use crate::handlers::command_handlers::{
     add_event, add_team, add_team_members, add_user, delete_event, delete_team, delete_user,
@@ -22,7 +25,6 @@ use crate::handlers::query_handlers::{
 };
 use crate::models::v_models::AppState;
 use crate::services::v_middlewares::AdminOnlyGuard;
-use actix_files::Files;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

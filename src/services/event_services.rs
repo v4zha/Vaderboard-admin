@@ -1,13 +1,12 @@
 use std::marker::PhantomData;
 
-use crate::models::{
-    error_models::VaderError,
-    v_models::{
-        ActiveEvent, AsyncDbRes, EndEvent, Event, NewEvent, Player, Team, User, VaderEvent,
-    },
-};
 use sqlx::SqlitePool;
 use uuid::Uuid;
+
+use crate::models::error_models::VaderError;
+use crate::models::v_models::{
+    ActiveEvent, AsyncDbRes, EndEvent, Event, NewEvent, Player, Team, User, VaderEvent,
+};
 
 impl<'a> Player<'a> for User {
     fn add_player(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
@@ -394,5 +393,3 @@ impl User {
         })
     }
 }
-
-    

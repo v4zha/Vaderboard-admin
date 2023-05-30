@@ -1,14 +1,12 @@
+use erased_serde::Serialize as ErasedSerialize;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
-use super::{
-    command_models::MemberInfo,
-    error_models::VaderError,
-    v_models::{
-        ActiveEvent, AsyncDbRes, EndEvent, Event, NewEvent, Player, Team, User, VaderEvent,
-    },
+use super::command_models::MemberInfo;
+use super::error_models::VaderError;
+use super::v_models::{
+    ActiveEvent, AsyncDbRes, EndEvent, Event, NewEvent, Player, Team, User, VaderEvent,
 };
-use erased_serde::Serialize as ErasedSerialize;
 
 pub enum EventStateWrapper<'a, T: Player<'a>> {
     New(Event<'a, T, NewEvent>),

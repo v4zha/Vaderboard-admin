@@ -1,11 +1,9 @@
 use std::future::{ready, Ready};
 
 use actix_session::SessionExt;
-use actix_web::{
-    body::{EitherBody, MessageBody},
-    dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    HttpResponse,
-};
+use actix_web::body::{EitherBody, MessageBody};
+use actix_web::dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform};
+use actix_web::HttpResponse;
 use futures::future::LocalBoxFuture;
 
 //Admin only guard middleware

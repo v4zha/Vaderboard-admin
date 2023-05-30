@@ -1,9 +1,10 @@
-use bcrypt::verify;
-use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, SqlitePool};
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
+
+use bcrypt::verify;
+use serde::{Deserialize, Serialize};
+use sqlx::{FromRow, SqlitePool};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 

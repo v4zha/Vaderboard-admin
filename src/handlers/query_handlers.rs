@@ -1,13 +1,13 @@
-use crate::models::{
-    error_models::VaderError,
-    query_models::{EventInfo, IdQuery},
-    v_models::{AppState, Team, User},
-};
+use std::sync::Arc;
+
 use actix_web::{get, web, HttpResponse, Responder};
 use erased_serde::Serialize as ErasedSerialize;
 use log::debug;
 use sqlx::SqlitePool;
-use std::sync::Arc;
+
+use crate::models::error_models::VaderError;
+use crate::models::query_models::{EventInfo, IdQuery};
+use crate::models::v_models::{AppState, Team, User};
 
 #[get("/event/info")]
 pub async fn get_current_event(

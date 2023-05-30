@@ -1,13 +1,12 @@
 use std::marker::PhantomData;
 
-use sqlx::{sqlite::SqliteRow, FromRow, Row, SqlitePool};
+use sqlx::sqlite::SqliteRow;
+use sqlx::{FromRow, Row, SqlitePool};
 use uuid::Uuid;
 
-use crate::models::{
-    error_models::VaderError,
-    query_models::{EventInfo, EventQuery, EventType},
-    v_models::{AsyncDbRes, Event, EventState, Player, Team, User},
-};
+use crate::models::error_models::VaderError;
+use crate::models::query_models::{EventInfo, EventQuery, EventType};
+use crate::models::v_models::{AsyncDbRes, Event, EventState, Player, Team, User};
 impl FromRow<'_, SqliteRow> for Team {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
         let id: Uuid = Uuid::parse_str(row.get("id")).map_err(|_e| sqlx::Error::ColumnDecode {

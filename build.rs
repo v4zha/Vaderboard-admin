@@ -1,30 +1,26 @@
-#![allow(dead_code)]
-use bcrypt::{hash, DEFAULT_COST};
-use dotenvy::dotenv;
-use sqlx::migrate::MigrateDatabase;
-use sqlx::{Sqlite, SqlitePool};
 use std::env;
 use std::process::Command;
 
-#[path = "./src/services/mod.rs"]
-mod services;
+use bcrypt::{hash, BcryptError, DEFAULT_COST};
+use dotenvy::dotenv;
+use sqlx::migrate::MigrateDatabase;
+use sqlx::{Sqlite, SqlitePool};
 
-#[path = "./src/models/mod.rs"]
-mod models;
-use models::v_models::AsyncDbRes;
-
-fn add_admin<'a>(uname: String, pass: String, db_pool: SqlitePool) -> AsyncDbRes<'a, ()> {
-    Box::pin(async move {
-        let passwd = hash(pass, DEFAULT_COST)?;
-        sqlx::query!(
-            "INSERT OR IGNORE INTO admin_login (username,password) VALUES (?,?)",
-            uname,
-            passwd,
-        )
-        .execute(&db_pool)
-        .await?;
-        Ok(())
-    })
+async fn add_admin<'a>(
+    uname: String,
+    pass: String,
+    db_pool: SqlitePool,
+) -> Result<(), BcryptError> {
+    let passwd = hash(pass, DEFAULT_COST)?;
+    sqlx::query!(
+        "INSERT OR IGNORE INTO admin_login (username,password) VALUES (?,?)",
+        uname,
+        passwd,
+    )
+    .execute(&db_pool)
+    .await
+    .expect("Error adding admin cred to admin_login");
+    Ok(())
 }
 
 #[tokio::main]

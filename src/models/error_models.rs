@@ -1,4 +1,5 @@
-use std::{error::Error, fmt::Display};
+use std::error::Error;
+use std::fmt::Display;
 
 use bcrypt::BcryptError;
 
@@ -59,7 +60,9 @@ impl<'a> Display for VaderError<'a> {
             VaderError::EventNotFound(e) => write!(f, "Event not Found.\n[error] : {}", e),
             VaderError::TeamNotFound(e) => write!(f, "Team not Found.\n[error] : {}", e),
             VaderError::UserNotFound(e) => write!(f, "User not Found.\n[error] : {}", e),
-            VaderError::AdminHashError(e) => write!(f, "Admin Hash Error.\n[error] : {}", e.to_string()),
+            VaderError::AdminHashError(e) => {
+                write!(f, "Admin Hash Error.\n[error] : {}", e.to_string())
+            }
         }
     }
 }

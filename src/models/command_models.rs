@@ -1,10 +1,8 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::{
-    query_models::EventType,
-    v_models::{Event, Team, User},
-};
+use super::query_models::EventType;
+use super::v_models::{Event, Team, User};
 
 #[derive(Deserialize, Serialize)]
 pub struct EventReq {

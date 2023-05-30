@@ -1,15 +1,17 @@
-use crate::models::{
-    command_models::{CommandResponse, ContestantInfo, EventReq, MemberInfo, ScoreUpdate},
-    error_models::VaderError,
-    query_models::{EventInfo, EventType, IdQuery},
-    v_models::{AdminInfo, AppState, Event, Team, User, VaderEvent},
-    wrapper_models::{EventStateWrapper, EventWrapper},
-};
+use std::sync::Arc;
+
 use actix_session::Session;
 use actix_web::{post, web, Either, HttpResponse, Responder};
 use log::{error, info};
 use sqlx::SqlitePool;
-use std::sync::Arc;
+
+use crate::models::command_models::{
+    CommandResponse, ContestantInfo, EventReq, MemberInfo, ScoreUpdate,
+};
+use crate::models::error_models::VaderError;
+use crate::models::query_models::{EventInfo, EventType, IdQuery};
+use crate::models::v_models::{AdminInfo, AppState, Event, Team, User, VaderEvent};
+use crate::models::wrapper_models::{EventStateWrapper, EventWrapper};
 
 #[post("/event/add")]
 pub async fn add_event(
