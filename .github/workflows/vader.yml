@@ -32,6 +32,8 @@ jobs:
 
       - name: Build and test
         env:
+          RUST_LOG: debug
+          ACTIONS_RUNNER_DEBUG: true
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
