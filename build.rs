@@ -11,6 +11,7 @@ async fn add_admin<'a>(
     pass: String,
     db_pool: SqlitePool,
 ) -> Result<(), BcryptError> {
+    // why no argon2 , veruthe : )
     let passwd = hash(pass, DEFAULT_COST)?;
     sqlx::query!(
         "INSERT OR IGNORE INTO admin_login (username,password) VALUES (?,?)",

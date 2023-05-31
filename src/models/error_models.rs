@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::fmt::Display;
 
+use actix_web::error::BlockingError;
 use bcrypt::BcryptError;
 
 #[derive(Debug)]
@@ -15,6 +16,7 @@ pub enum VaderError<'a> {
     TeamNotFound(&'a str),
     UserNotFound(&'a str),
     AdminHashError(BcryptError),
+    BlockingOpError(BlockingError),
 }
 
 impl<'a> From<sqlx::Error> for VaderError<'a> {
@@ -25,6 +27,12 @@ impl<'a> From<sqlx::Error> for VaderError<'a> {
 impl<'a> From<BcryptError> for VaderError<'a> {
     fn from(value: BcryptError) -> Self {
         Self::AdminHashError(value)
+    }
+}
+
+impl<'a> From<BlockingError> for VaderError<'a> {
+    fn from(value: BlockingError) -> Self {
+        Self::BlockingOpError(value)
     }
 }
 
@@ -62,6 +70,13 @@ impl<'a> Display for VaderError<'a> {
             VaderError::UserNotFound(e) => write!(f, "User not Found.\n[error] : {}", e),
             VaderError::AdminHashError(e) => {
                 write!(f, "Admin Hash Error.\n[error] : {}", e.to_string())
+            }
+            VaderError::BlockingOpError(e) => {
+                write!(
+                    f,
+                    "Error in performing blocking operation.\n[error] : {}",
+                    e.to_string()
+                )
             }
         }
     }

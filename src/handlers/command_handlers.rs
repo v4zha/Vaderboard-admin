@@ -32,6 +32,7 @@ pub async fn add_team_event(
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let mut event_state = app_state.current_event.lock().await;
+    log::debug!("app_state : {:?}", event_state);
     if event_state.is_some() {
         error!("Request delined.Another Event already added.");
         return HttpResponse::BadRequest()
@@ -198,6 +199,7 @@ pub async fn add_team(
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let event_state = app_state.current_event.lock().await;
+    log::debug!("{:?}", event_state);
     if event_state.is_none() {
         error!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to start event")
@@ -386,7 +388,7 @@ pub async fn login(
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let login = login_info.into_inner();
-    match login.is_admin(&db_pool).await {
+    match login.verify_passwd(&db_pool).await {
         Ok(true) => {
             if session.insert("admin", true).is_ok() {
                 log::debug!("Login Successful : )");

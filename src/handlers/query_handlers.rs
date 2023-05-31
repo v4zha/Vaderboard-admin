@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
-use actix_web::{get, web, HttpResponse, Responder};
+use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
+use actix_web_actors::ws;
 use erased_serde::Serialize as ErasedSerialize;
 use log::debug;
 use sqlx::SqlitePool;
 
 use crate::models::error_models::VaderError;
-use crate::models::query_models::{EventInfo, IdQuery};
+use crate::models::query_models::{EventInfo, FtsQuery, IdQuery, TeamInfo};
 use crate::models::v_models::{AppState, Team, User};
 
 #[get("/event/info")]
@@ -63,11 +64,36 @@ pub async fn get_user_info(
     }
 }
 
-#[get("/events/fts")]
-pub async fn events_fts(db_pool: web::Data<SqlitePool>, steam: web::Payload) -> impl Responder {}
+#[get("/event/fts")]
+pub async fn event_fts(
+    req: HttpRequest,
+    db_pool: web::Data<SqlitePool>,
+    stream: web::Payload,
+) -> impl Responder {
+    ws::start(
+        FtsQuery::<EventInfo>::new(db_pool.into_inner()),
+        &req,
+        stream,
+    )
+}
 
 #[get("/team/fts")]
-pub async fn team_fts(db_pool: web::Data<SqlitePool>, steam: web::Payload) -> impl Responder {}
-
-#[get("/users/fts")]
-pub async fn users_fts(db_pool: web::Data<SqlitePool>, steam: web::Payload) -> impl Responder {}
+pub async fn team_fts<'a>(
+    req: HttpRequest,
+    db_pool: web::Data<SqlitePool>,
+    stream: web::Payload,
+) -> impl Responder {
+    ws::start(
+        FtsQuery::<TeamInfo>::new(db_pool.into_inner()),
+        &req,
+        stream,
+    )
+}
+#[get("/user/fts")]
+pub async fn user_fts(
+    req: HttpRequest,
+    db_pool: web::Data<SqlitePool>,
+    stream: web::Payload,
+) -> impl Responder {
+    ws::start(FtsQuery::<User>::new(db_pool.into_inner()), &req, stream)
+}

@@ -71,7 +71,10 @@ pub struct AdminInfo {
     pub password: String,
 }
 impl AdminInfo {
-    pub fn is_admin<'a>(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, bool> {
+    //Never use in production : )
+    // Use an auth service , athakum nallath : )
+    // also use argon2 for hashing as alternative to bcrypt
+    pub fn verify_passwd(self, db_pool: &SqlitePool) -> AsyncDbRes<'_, bool> {
         Box::pin(async move {
             let res = sqlx::query_as::<_, Self>(
                 "SELECT username,password FROM admin_login WHERE username = ?",
@@ -79,7 +82,9 @@ impl AdminInfo {
             .bind(&self.username)
             .fetch_one(db_pool)
             .await?;
-            Ok(verify(&self.password, &res.password)?)
+            let verify_res =
+                actix_web::web::block(move || verify(self.password, &res.password)).await??;
+            Ok(verify_res)
         })
     }
 }

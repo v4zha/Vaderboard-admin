@@ -7,7 +7,9 @@ use actix_web::HttpResponse;
 use futures::future::LocalBoxFuture;
 
 //Admin only guard middleware
+// Use Actix Identity for production
 // : )
+
 pub struct AdminOnlyGuard;
 
 impl<S, B> Transform<S, ServiceRequest> for AdminOnlyGuard

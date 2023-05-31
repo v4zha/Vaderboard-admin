@@ -21,7 +21,7 @@ use crate::handlers::command_handlers::{
     end_event, login, reset_score, start_event, update_score,
 };
 use crate::handlers::query_handlers::{
-    get_current_event, get_event_info, get_team_info, get_user_info,
+    event_fts, get_current_event, get_event_info, get_team_info, get_user_info, team_fts, user_fts,
 };
 use crate::models::v_models::AppState;
 use crate::services::v_middlewares::AdminOnlyGuard;
@@ -41,9 +41,9 @@ async fn main() -> std::io::Result<()> {
     let db_pool = SqlitePool::connect(&db_url)
         .await
         .expect("Error connecting to Database");
+    let app_state = Arc::new(AppState::new());
     log::info!("Database connection successful");
     log::info!("Server running at {}", host_port);
-    let app_state = Arc::new(AppState::new());
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
@@ -73,6 +73,9 @@ async fn main() -> std::io::Result<()> {
             .service(get_current_event)
             .service(get_event_info)
             .service(get_team_info)
+            .service(event_fts)
+            .service(team_fts)
+            .service(user_fts)
             .service(Files::new("/", "dist").index_file("index.html"))
     })
     .bind(host_port)?

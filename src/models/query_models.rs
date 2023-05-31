@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
@@ -37,10 +38,26 @@ pub struct EventInfo {
     pub event_type: EventType,
 }
 
-pub struct FtsQuery<'a, 'b, T: Queriable>
+#[derive(Serialize)]
+pub struct TeamInfo {
+    pub id: Uuid,
+    pub name: String,
+    pub score: i64,
+    pub logo: Option<String>,
+}
+
+pub struct FtsQuery<'a, T: Queriable> {
+    pub db_pool: Arc<SqlitePool>,
+    type_marker: PhantomData<&'a T>,
+}
+impl<'a, T> FtsQuery<'a, T>
 where
-    'b: 'a,
+    T: Queriable,
 {
-    db_pool: &'b SqlitePool,
-    type_marker: &'a PhantomData<T>,
+    pub fn new(db_pool: Arc<SqlitePool>) -> Self {
+        Self {
+            db_pool,
+            type_marker: PhantomData::<&'a T>,
+        }
+    }
 }

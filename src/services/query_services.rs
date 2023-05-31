@@ -1,13 +1,15 @@
 use std::marker::PhantomData;
 
-use actix::Actor;
+use actix::{
+    Actor, AsyncContext, ContextFutureSpawner, Handler, Message, StreamHandler, WrapFuture,
+};
 use actix_web_actors::ws;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Row, SqlitePool};
 use uuid::Uuid;
 
 use crate::models::error_models::VaderError;
-use crate::models::query_models::{EventInfo, EventQuery, EventType, FtsQuery};
+use crate::models::query_models::{EventInfo, EventQuery, EventType, FtsQuery, TeamInfo};
 use crate::models::v_models::{AsyncDbRes, Event, EventState, Player, Team, User};
 impl FromRow<'_, SqliteRow> for Team {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
@@ -49,6 +51,24 @@ impl FromRow<'_, SqliteRow> for User {
         let score: i64 = row.get("score");
         let logo: Option<String> = row.get("logo");
         Ok(User {
+            id,
+            name,
+            logo,
+            score,
+        })
+    }
+}
+
+impl FromRow<'_, SqliteRow> for TeamInfo {
+    fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
+        let id: Uuid = Uuid::parse_str(row.get("id")).map_err(|_e| sqlx::Error::ColumnDecode {
+            index: "0".to_string(),
+            source: Box::new(VaderError::SqlxFieldError("Error decoding User Id")),
+        })?;
+        let name: String = row.get("name");
+        let score: i64 = row.get("score");
+        let logo: Option<String> = row.get("logo");
+        Ok(TeamInfo {
             id,
             name,
             logo,
@@ -188,22 +208,27 @@ impl EventInfo {
 
 pub trait Queriable {
     type QueryRes;
-    fn fts_query<'a>(
+    fn fts_query<'a, 'b>(
         param: &'a str,
-        db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a, Vec<Self::QueryRes>>;
+        db_pool: &'b SqlitePool,
+    ) -> AsyncDbRes<'a, Vec<Self::QueryRes>>
+    where
+        'b: 'a;
 }
-impl Queriable for Team {
+impl Queriable for TeamInfo {
     type QueryRes = Self;
-    fn fts_query<'a>(
+    fn fts_query<'a, 'b>(
         param: &'a str,
-        db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a, Vec<Self::QueryRes>> {
+        db_pool: &'b SqlitePool,
+    ) -> AsyncDbRes<'a, Vec<Self::QueryRes>>
+    where
+        'b: 'a,
+    {
         Box::pin(async move {
-            let teams = sqlx::query_as::<_, Team>(
-                "SELECT id,name,score,logo FROM teams_fts WHERE name MATCH '{}*'",
+            let teams = sqlx::query_as::<_, TeamInfo>(
+                "SELECT id,name,score,logo FROM teams_fts WHERE name MATCH  ? ",
             )
-            .bind(param)
+            .bind(format!("{}*", param))
             .fetch_all(db_pool)
             .await?;
             Ok(teams)
@@ -212,15 +237,18 @@ impl Queriable for Team {
 }
 impl Queriable for User {
     type QueryRes = Self;
-    fn fts_query<'a>(
+    fn fts_query<'a, 'b>(
         param: &'a str,
-        db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a, Vec<Self::QueryRes>> {
+        db_pool: &'b SqlitePool,
+    ) -> AsyncDbRes<'a, Vec<Self::QueryRes>>
+    where
+        'b: 'a,
+    {
         Box::pin(async move {
             let users = sqlx::query_as::<_, User>(
-                "SELECT id,name,score,logo FROM users_fts WHERE name MATCH '{}*'",
+                "SELECT id,name,score,logo FROM users_fts WHERE name MATCH  ? ",
             )
-            .bind(param)
+            .bind(format!("{}*", param))
             .fetch_all(db_pool)
             .await?;
             Ok(users)
@@ -229,15 +257,18 @@ impl Queriable for User {
 }
 impl Queriable for EventInfo {
     type QueryRes = Self;
-    fn fts_query<'a>(
+    fn fts_query<'a, 'b>(
         param: &'a str,
-        db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a, Vec<Self::QueryRes>> {
+        db_pool: &'b SqlitePool,
+    ) -> AsyncDbRes<'a, Vec<Self::QueryRes>>
+    where
+        'b: 'a,
+    {
         Box::pin(async move {
             let events = sqlx::query_as::<_, EventInfo>(
-                "SELECT id,name,logo,event_type FROM events_fts WHERE name MATCH '{}*'",
+                "SELECT id,name,logo,event_type FROM events_fts WHERE name MATCH  ? ",
             )
-            .bind(param)
+            .bind(format!("{}*", param))
             .fetch_all(db_pool)
             .await?;
             Ok(events)
@@ -245,21 +276,146 @@ impl Queriable for EventInfo {
     }
 }
 
-impl<'a, 'b> Actor for FtsQuery<'a, 'b, Team>
+#[derive(Message)]
+#[rtype(result = "()")]
+struct FtsQueryRes(String);
+
+impl<'a> Actor for FtsQuery<'a, TeamInfo>
 where
     'a: 'static,
 {
     type Context = ws::WebsocketContext<Self>;
 }
-impl<'a, 'b> Actor for FtsQuery<'a, 'b, User>
+
+type WsMsg = Result<ws::Message, ws::ProtocolError>;
+
+impl<'a> Handler<FtsQueryRes> for FtsQuery<'a, TeamInfo>
+where
+    'a: 'static,
+{
+    type Result = ();
+    fn handle(&mut self, msg: FtsQueryRes, ctx: &mut Self::Context) {
+        let res_str = msg.0;
+        ctx.text(res_str);
+    }
+}
+
+impl<'a> StreamHandler<WsMsg> for FtsQuery<'a, TeamInfo>
+where
+    'a: 'static,
+{
+    fn handle(&mut self, msg: WsMsg, ctx: &mut Self::Context) {
+        use ws::Message::*;
+        let pool = self.db_pool.clone();
+        let addr = ctx.address();
+        match msg {
+            Ok(Ping(msg)) => ctx.pong(&msg),
+            Ok(Text(param)) => {
+                async move {
+                    let teams = TeamInfo::fts_query(&param, &pool)
+                        .await
+                        .ok()
+                        .and_then(|t| serde_json::to_string(&t).ok());
+                    if let Some(teams_str) = teams {
+                        addr.do_send(FtsQueryRes(teams_str))
+                    }
+                }
+                .into_actor(self)
+                .wait(ctx);
+            }
+            _ => (),
+        }
+    }
+}
+
+impl<'a> Actor for FtsQuery<'a, User>
 where
     'a: 'static,
 {
     type Context = ws::WebsocketContext<Self>;
 }
-impl<'a, 'b> Actor for FtsQuery<'a, 'b, EventInfo>
+
+impl<'a> Handler<FtsQueryRes> for FtsQuery<'a, User>
+where
+    'a: 'static,
+{
+    type Result = ();
+    fn handle(&mut self, msg: FtsQueryRes, ctx: &mut Self::Context) {
+        let res_str = msg.0;
+        ctx.text(res_str);
+    }
+}
+
+impl<'a> StreamHandler<WsMsg> for FtsQuery<'a, User>
+where
+    'a: 'static,
+{
+    fn handle(&mut self, msg: WsMsg, ctx: &mut Self::Context) {
+        use ws::Message::*;
+        let pool = self.db_pool.clone();
+        let addr = ctx.address();
+        match msg {
+            Ok(Ping(msg)) => ctx.pong(&msg),
+            Ok(Text(param)) => {
+                async move {
+                    let users = User::fts_query(&param, &pool)
+                        .await
+                        .ok()
+                        .and_then(|t| serde_json::to_string(&t).ok());
+                    if let Some(users_str) = users {
+                        addr.do_send(FtsQueryRes(users_str))
+                    }
+                }
+                .into_actor(self)
+                .wait(ctx);
+            }
+            _ => (),
+        }
+    }
+}
+
+impl<'a> Actor for FtsQuery<'a, EventInfo>
 where
     'a: 'static,
 {
     type Context = ws::WebsocketContext<Self>;
+}
+
+impl<'a> Handler<FtsQueryRes> for FtsQuery<'a, EventInfo>
+where
+    'a: 'static,
+{
+    type Result = ();
+    fn handle(&mut self, msg: FtsQueryRes, ctx: &mut Self::Context) {
+        let res_str = msg.0;
+        ctx.text(res_str);
+    }
+}
+
+impl<'a> StreamHandler<WsMsg> for FtsQuery<'a, EventInfo>
+where
+    'a: 'static,
+{
+    fn handle(&mut self, msg: WsMsg, ctx: &mut Self::Context) {
+        use ws::Message::*;
+        let pool = self.db_pool.clone();
+        let addr = ctx.address();
+        match msg {
+            Ok(Ping(msg)) => ctx.pong(&msg),
+            Ok(Text(param)) => {
+                async move {
+                    let events = EventInfo::fts_query(&param, &pool)
+                        .await
+                        .ok()
+                        .and_then(|t| serde_json::to_string(&t).ok());
+                    if let Some(events_str) = events {
+                        addr.do_send(FtsQueryRes(events_str))
+                    }
+                }
+                .into_actor(self)
+                .wait(ctx);
+            }
+            _ => (),
+        }
+    }
 }

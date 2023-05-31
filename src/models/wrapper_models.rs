@@ -8,6 +8,7 @@ use super::v_models::{
     ActiveEvent, AsyncDbRes, EndEvent, Event, NewEvent, Player, Team, User, VaderEvent,
 };
 
+#[derive(Debug)]
 pub enum EventStateWrapper<'a, T: Player<'a>> {
     New(Event<'a, T, NewEvent>),
     Active(Event<'a, T, ActiveEvent>),
@@ -46,6 +47,7 @@ where
         }
     }
 }
+#[derive(Debug)]
 pub enum EventWrapper<'a> {
     TeamEvent(EventStateWrapper<'a, Team>),
     UserEvent(EventStateWrapper<'a, User>),
