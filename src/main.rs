@@ -21,7 +21,7 @@ use crate::handlers::command_handlers::{
     end_event, login, reset_score, start_event, update_score,
 };
 use crate::handlers::query_handlers::{
-    event_fts, get_current_event, get_event_info, get_team_info, get_user_info, team_fts, user_fts,
+    event_fts, get_current_event, get_event_info, get_team_info, get_user_info, team_fts, user_fts, vaderboard,
 };
 use crate::models::v_models::AppState;
 use crate::services::v_middlewares::AdminOnlyGuard;
@@ -76,6 +76,7 @@ async fn main() -> std::io::Result<()> {
             .service(event_fts)
             .service(team_fts)
             .service(user_fts)
+            // .service(vaderboard)
             .service(Files::new("/", "dist").index_file("index.html"))
     })
     .bind(host_port)?

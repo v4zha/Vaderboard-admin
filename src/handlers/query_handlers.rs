@@ -97,3 +97,20 @@ pub async fn user_fts(
 ) -> impl Responder {
     ws::start(FtsQuery::<User>::new(db_pool.into_inner()), &req, stream)
 }
+
+#[get("/vaderboard")]
+pub async fn vaderboard(
+    req: HttpRequest,
+    app_state: web::Data<Arc<AppState>>,
+    db_pool: web::Data<SqlitePool>,
+    stream: web::Payload,
+) -> impl Responder {
+    let event_state = app_state.current_event.lock().await;
+    if event_state.is_none() {
+        debug!("Request delined.No event added");
+        HttpResponse::BadRequest().body("No event added.Add event to Fetch details")
+    } else {
+        // ws::start(,&req,stream)
+        todo!()
+    }
+}

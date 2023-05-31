@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -11,7 +12,7 @@ use crate::services::query_services::Queriable;
 #[derive(Serialize)]
 pub struct EventQuery<'a, T: Player<'a>> {
     pub id: Uuid,
-    pub name: String,
+    pub name: Cow<'a, str>,
     pub logo: Option<String>,
     pub contestants: Vec<T>,
     pub event_type: EventType,
@@ -31,17 +32,17 @@ pub struct IdQuery {
 }
 
 #[derive(Serialize)]
-pub struct EventInfo {
+pub struct EventInfo<'a> {
     pub id: Uuid,
-    pub name: String,
+    pub name: Cow<'a, str>,
     pub logo: Option<String>,
     pub event_type: EventType,
 }
 
 #[derive(Serialize)]
-pub struct TeamInfo {
+pub struct TeamInfo<'a> {
     pub id: Uuid,
-    pub name: String,
+    pub name: Cow<'a, str>,
     pub score: i64,
     pub logo: Option<String>,
 }

@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -5,19 +7,19 @@ use super::query_models::EventType;
 use super::v_models::{Event, Team, User};
 
 #[derive(Deserialize, Serialize)]
-pub struct EventReq {
-    name: String,
+pub struct EventReq<'a> {
+    name: Cow<'a, str>,
     #[serde(default)]
     logo: Option<String>,
     pub event_type: EventType,
 }
-impl From<EventReq> for Event<'_, Team> {
-    fn from(req: EventReq) -> Self {
+impl<'a> From<EventReq<'a>> for Event<'a, Team<'a>> {
+    fn from(req: EventReq<'a>) -> Self {
         Event::<Team>::new(req.name, req.logo)
     }
 }
-impl From<EventReq> for Event<'_, User> {
-    fn from(req: EventReq) -> Self {
+impl<'a> From<EventReq<'a>> for Event<'a, User<'a>> {
+    fn from(req: EventReq<'a>) -> Self {
         Event::<User>::new(req.name, req.logo)
     }
 }
@@ -28,18 +30,18 @@ pub struct ScoreUpdate {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct ContestantInfo {
-    name: String,
+pub struct ContestantInfo<'a> {
+    name: Cow<'a, str>,
     #[serde(default)]
     logo: Option<String>,
 }
 
-impl From<ContestantInfo> for User {
+impl<'a> From<ContestantInfo<'a>> for User<'a> {
     fn from(ci: ContestantInfo) -> User {
         User::new(ci.name, ci.logo)
     }
 }
-impl From<ContestantInfo> for Team {
+impl<'a> From<ContestantInfo<'a>> for Team<'a> {
     fn from(ci: ContestantInfo) -> Team {
         Team::new(ci.name, ci.logo)
     }

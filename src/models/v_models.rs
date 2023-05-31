@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
@@ -45,20 +46,17 @@ pub trait VaderEvent<'a> {
 
 pub trait EventState: Send + Sync {}
 
-#[derive(Debug)]
 pub struct NewEvent;
-#[derive(Debug)]
 pub struct ActiveEvent;
-#[derive(Debug)]
 pub struct EndEvent;
 impl EventState for NewEvent {}
 impl EventState for ActiveEvent {}
 impl EventState for EndEvent {}
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct Event<'a, T: Player<'a>, U: EventState = NewEvent> {
     pub id: Uuid,
-    pub name: String,
+    pub name: Cow<'a,str>,
     #[serde(default)]
     pub logo: Option<String>,
     pub player_marker: PhantomData<&'a T>,
@@ -89,26 +87,26 @@ impl AdminInfo {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Team {
+#[derive(Serialize, Deserialize)]
+pub struct Team<'a> {
     pub id: Uuid,
-    pub name: String,
+    pub name: Cow<'a,str>,
     pub score: i64,
     #[serde(default)]
     pub logo: Option<String>,
     pub members: Vec<Uuid>,
 }
-#[derive(Serialize, Deserialize, Debug)]
-pub struct User {
+#[derive(Serialize, Deserialize)]
+pub struct User<'a> {
     pub id: Uuid,
-    pub name: String,
+    pub name: Cow<'a,str>,
     pub score: i64,
     #[serde(default)]
     pub logo: Option<String>,
 }
 
 impl<'a, T: Player<'a>, U: EventState> Event<'a, T, U> {
-    pub fn new(name: String, logo: Option<String>) -> Self {
+    pub fn new(name: Cow<'a,str>, logo: Option<String>) -> Self {
         Self {
             id: Uuid::new_v4(),
             name,

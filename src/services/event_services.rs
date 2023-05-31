@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::marker::PhantomData;
 
 use sqlx::SqlitePool;
@@ -8,7 +9,7 @@ use crate::models::v_models::{
     ActiveEvent, AsyncDbRes, EndEvent, Event, NewEvent, Player, Team, User, VaderEvent,
 };
 
-impl<'a> Player<'a> for User {
+impl<'a> Player<'a> for User<'a> {
     fn add_player(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
         let id = self.id.to_string();
         let name = &self.name;
@@ -34,7 +35,7 @@ impl<'a> Player<'a> for User {
     }
 }
 
-impl<'a> Player<'a> for Team {
+impl<'a> Player<'a> for Team<'a> {
     fn add_player(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
         Box::pin(async move {
             let id = self.id.to_string();
@@ -59,7 +60,7 @@ impl<'a> Player<'a> for Team {
         self.logo.as_ref().unwrap_or(&String::new()).to_string()
     }
 }
-impl<'a> Team {
+impl<'a> Team<'a> {
     fn add_members_from_id(
         team_id: &'a Uuid,
         members: &'a [Uuid],
@@ -98,8 +99,8 @@ impl<'a> Team {
         })
     }
 }
-impl<'a> VaderEvent<'a> for Event<'a, Team> {
-    type Participant = Team;
+impl<'a> VaderEvent<'a> for Event<'a, Team<'a>> {
+    type Participant = Team<'a>;
     fn add_participant(
         &'a self,
         participant: &Self::Participant,
@@ -148,8 +149,8 @@ impl<'a> VaderEvent<'a> for Event<'a, Team> {
     }
 }
 
-impl<'a> VaderEvent<'a> for Event<'a, User> {
-    type Participant = User;
+impl<'a> VaderEvent<'a> for Event<'a, User<'a>> {
+    type Participant = User<'a>;
     fn add_participant(
         &'a self,
         participant: &Self::Participant,
@@ -197,7 +198,7 @@ impl<'a> VaderEvent<'a> for Event<'a, User> {
     }
 }
 
-impl<'a> Event<'a, User, ActiveEvent> {
+impl<'a> Event<'a, User<'a>, ActiveEvent> {
     pub fn update_score_by_id(
         &self,
         user_id: &Uuid,
@@ -222,7 +223,7 @@ impl<'a> Event<'a, User, ActiveEvent> {
     }
 }
 
-impl<'a> Event<'a, Team> {
+impl<'a> Event<'a, Team<'a>> {
     pub fn add_team_members(
         &'a self,
         team_id: &'a Uuid,
@@ -233,7 +234,7 @@ impl<'a> Event<'a, Team> {
     }
 }
 
-impl<'a> Event<'a, Team, ActiveEvent> {
+impl<'a> Event<'a, Team<'a>, ActiveEvent> {
     pub fn update_score_by_id(
         &self,
         team_id: &Uuid,
@@ -258,7 +259,7 @@ impl<'a> Event<'a, Team, ActiveEvent> {
     }
 }
 
-impl<'a> Event<'a, Team, NewEvent> {
+impl<'a> Event<'a, Team<'a>, NewEvent> {
     pub fn reset_score(&self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
         let event_id = self.id.to_string();
         Box::pin(async move {
@@ -268,7 +269,7 @@ impl<'a> Event<'a, Team, NewEvent> {
         })
     }
 }
-impl<'a> Event<'a, User, NewEvent> {
+impl<'a> Event<'a, User<'a>, NewEvent> {
     pub fn reset_score(&self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
         let event_id = self.id.to_string();
         Box::pin(async move {
@@ -303,7 +304,7 @@ where
     fn from(e: &Event<'a, T, NewEvent>) -> Self {
         Event {
             id: e.id,
-            name: e.name.to_owned(),
+            name: e.name.clone(),
             logo: e.logo.to_owned(),
             player_marker: PhantomData::<&'a T>,
             state_marker: PhantomData::<&'a ActiveEvent>,
@@ -317,7 +318,7 @@ where
     fn from(e: &Event<'a, T, ActiveEvent>) -> Self {
         Event {
             id: e.id,
-            name: e.name.to_owned(),
+            name: e.name.clone(),
             logo: e.logo.to_owned(),
             player_marker: PhantomData::<&'a T>,
             state_marker: PhantomData::<&'a EndEvent>,
@@ -325,8 +326,8 @@ where
     }
 }
 
-impl Team {
-    pub fn new(name: String, logo: Option<String>) -> Self {
+impl<'a> Team<'a> {
+    pub fn new(name: Cow<'a, str>, logo: Option<String>) -> Self {
         Self {
             id: Uuid::new_v4(),
             name,
@@ -335,7 +336,7 @@ impl Team {
             score: 0,
         }
     }
-    pub fn get_team<'a>(team_id: &'a Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, Self> {
+    pub fn get_team<'b>(team_id: &'b Uuid, db_pool: &'b SqlitePool) -> AsyncDbRes<'b, Self> {
         let id = team_id.to_string();
         Box::pin(async move {
             let team = sqlx::query_as::<_, Team>(
@@ -347,7 +348,7 @@ impl Team {
             Ok(team)
         })
     }
-    pub fn delete_team<'a>(id: &Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
+    pub fn delete_team<'b>(id: &'b Uuid, db_pool: &'b SqlitePool) -> AsyncDbRes<'b, ()> {
         let id = id.to_string();
         Box::pin(async move {
             let res = sqlx::query!("DELETE FROM teams WHERE id = ? ", id)
@@ -360,8 +361,8 @@ impl Team {
         })
     }
 }
-impl User {
-    pub fn new(name: String, logo: Option<String>) -> Self {
+impl<'a> User<'a> {
+    pub fn new(name: Cow<'a, str>, logo: Option<String>) -> Self {
         Self {
             id: Uuid::new_v4(),
             name,
@@ -369,7 +370,7 @@ impl User {
             score: 0,
         }
     }
-    pub fn get_user<'a>(user_id: &'a Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, Self> {
+    pub fn get_user<'b>(user_id: &'b Uuid, db_pool: &'b SqlitePool) -> AsyncDbRes<'b, Self> {
         let id = user_id.to_string();
         Box::pin(async move {
             let user =
@@ -380,7 +381,7 @@ impl User {
             Ok(user)
         })
     }
-    pub fn delete_user<'a>(id: &'a Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
+    pub fn delete_user<'b>(id: &'b Uuid, db_pool: &'b SqlitePool) -> AsyncDbRes<'b, ()> {
         let id = id.to_string();
         Box::pin(async move {
             let res = sqlx::query!("DELETE FROM users WHERE id = ? ", id)

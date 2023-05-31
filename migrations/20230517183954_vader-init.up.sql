@@ -12,12 +12,19 @@ CREATE TABLE teams (
     logo TEXT
 );
 
+-- index for fast score reads 
+-- for vaderboard websocket endpoint : )
+
+CREATE INDEX idx_teams_score ON teams (score);
+
 CREATE TABLE users (
     id UUID PRIMARY KEY,
     name TEXT UNIQUE,
     score INTEGER,
     logo TEXT
 );
+
+CREATE INDEX idx_users_score ON users (score);
 
 CREATE TABLE event_teams (
     event_id UUID,

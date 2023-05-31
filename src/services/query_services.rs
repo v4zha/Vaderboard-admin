@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::models::error_models::VaderError;
 use crate::models::query_models::{EventInfo, EventQuery, EventType, FtsQuery, TeamInfo};
 use crate::models::v_models::{AsyncDbRes, Event, EventState, Player, Team, User};
-impl FromRow<'_, SqliteRow> for Team {
+impl FromRow<'_, SqliteRow> for Team<'_> {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
         let id: Uuid = Uuid::parse_str(row.get("id")).map_err(|_e| sqlx::Error::ColumnDecode {
             index: "0".to_string(),
@@ -34,14 +34,14 @@ impl FromRow<'_, SqliteRow> for Team {
             .collect::<Result<Vec<Uuid>, sqlx::Error>>()?;
         Ok(Team {
             id,
-            name,
+            name: name.into(),
             logo,
             score,
             members,
         })
     }
 }
-impl FromRow<'_, SqliteRow> for User {
+impl FromRow<'_, SqliteRow> for User<'_> {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
         let id: Uuid = Uuid::parse_str(row.get("id")).map_err(|_e| sqlx::Error::ColumnDecode {
             index: "0".to_string(),
@@ -52,14 +52,14 @@ impl FromRow<'_, SqliteRow> for User {
         let logo: Option<String> = row.get("logo");
         Ok(User {
             id,
-            name,
+            name: name.into(),
             logo,
             score,
         })
     }
 }
 
-impl FromRow<'_, SqliteRow> for TeamInfo {
+impl FromRow<'_, SqliteRow> for TeamInfo<'_> {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
         let id: Uuid = Uuid::parse_str(row.get("id")).map_err(|_e| sqlx::Error::ColumnDecode {
             index: "0".to_string(),
@@ -70,7 +70,7 @@ impl FromRow<'_, SqliteRow> for TeamInfo {
         let logo: Option<String> = row.get("logo");
         Ok(TeamInfo {
             id,
-            name,
+            name: name.into(),
             logo,
             score,
         })
@@ -94,14 +94,14 @@ where
 
         Ok(Event {
             id,
-            name,
+            name: name.into(),
             logo,
             player_marker: PhantomData::<&'a T>,
             state_marker: PhantomData::<&'a U>,
         })
     }
 }
-impl<'a, U> Event<'a, Team, U>
+impl<'a, U> Event<'a, Team<'a>, U>
 where
     U: EventState,
 {
@@ -130,7 +130,7 @@ where
         })
     }
 }
-impl<'a, U> Event<'a, User, U>
+impl<'a, U> Event<'a, User<'a>, U>
 where
     U: EventState,
 {
@@ -161,8 +161,8 @@ where
         })
     }
 }
-impl FromRow<'_, SqliteRow> for EventInfo {
-    fn from_row(row: &'_ SqliteRow) -> Result<EventInfo, sqlx::Error> {
+impl<'a, 'b> FromRow<'a, SqliteRow> for EventInfo<'b> {
+    fn from_row(row: &'a SqliteRow) -> Result<EventInfo<'b>, sqlx::Error> {
         let id_str: String = row.get("id");
         let id: Uuid = Uuid::parse_str(&id_str).map_err(|_e| sqlx::Error::ColumnDecode {
             index: "0".to_string(),
@@ -184,14 +184,14 @@ impl FromRow<'_, SqliteRow> for EventInfo {
 
         Ok(EventInfo {
             id,
-            name,
+            name: name.into(),
             logo,
             event_type,
         })
     }
 }
 
-impl EventInfo {
+impl EventInfo<'_> {
     pub fn get_event_info<'a>(event_id: &'a Uuid, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, Self> {
         let id = event_id.to_string();
         Box::pin(async move {
@@ -215,7 +215,7 @@ pub trait Queriable {
     where
         'b: 'a;
 }
-impl Queriable for TeamInfo {
+impl Queriable for TeamInfo<'_> {
     type QueryRes = Self;
     fn fts_query<'a, 'b>(
         param: &'a str,
@@ -235,7 +235,7 @@ impl Queriable for TeamInfo {
         })
     }
 }
-impl Queriable for User {
+impl Queriable for User<'_> {
     type QueryRes = Self;
     fn fts_query<'a, 'b>(
         param: &'a str,
@@ -255,7 +255,7 @@ impl Queriable for User {
         })
     }
 }
-impl Queriable for EventInfo {
+impl Queriable for EventInfo<'_> {
     type QueryRes = Self;
     fn fts_query<'a, 'b>(
         param: &'a str,
@@ -280,7 +280,7 @@ impl Queriable for EventInfo {
 #[rtype(result = "()")]
 struct FtsQueryRes(String);
 
-impl<'a> Actor for FtsQuery<'a, TeamInfo>
+impl<'a> Actor for FtsQuery<'a, TeamInfo<'_>>
 where
     'a: 'static,
 {
@@ -289,7 +289,7 @@ where
 
 type WsMsg = Result<ws::Message, ws::ProtocolError>;
 
-impl<'a> Handler<FtsQueryRes> for FtsQuery<'a, TeamInfo>
+impl<'a> Handler<FtsQueryRes> for FtsQuery<'a, TeamInfo<'_>>
 where
     'a: 'static,
 {
@@ -300,7 +300,7 @@ where
     }
 }
 
-impl<'a> StreamHandler<WsMsg> for FtsQuery<'a, TeamInfo>
+impl<'a> StreamHandler<WsMsg> for FtsQuery<'a, TeamInfo<'_>>
 where
     'a: 'static,
 {
@@ -328,14 +328,14 @@ where
     }
 }
 
-impl<'a> Actor for FtsQuery<'a, User>
+impl<'a> Actor for FtsQuery<'a, User<'_>>
 where
     'a: 'static,
 {
     type Context = ws::WebsocketContext<Self>;
 }
 
-impl<'a> Handler<FtsQueryRes> for FtsQuery<'a, User>
+impl<'a> Handler<FtsQueryRes> for FtsQuery<'a, User<'_>>
 where
     'a: 'static,
 {
@@ -346,7 +346,7 @@ where
     }
 }
 
-impl<'a> StreamHandler<WsMsg> for FtsQuery<'a, User>
+impl<'a> StreamHandler<WsMsg> for FtsQuery<'a, User<'_>>
 where
     'a: 'static,
 {
@@ -374,14 +374,14 @@ where
     }
 }
 
-impl<'a> Actor for FtsQuery<'a, EventInfo>
+impl<'a> Actor for FtsQuery<'a, EventInfo<'_>>
 where
     'a: 'static,
 {
     type Context = ws::WebsocketContext<Self>;
 }
 
-impl<'a> Handler<FtsQueryRes> for FtsQuery<'a, EventInfo>
+impl<'a> Handler<FtsQueryRes> for FtsQuery<'a, EventInfo<'_>>
 where
     'a: 'static,
 {
@@ -392,7 +392,7 @@ where
     }
 }
 
-impl<'a> StreamHandler<WsMsg> for FtsQuery<'a, EventInfo>
+impl<'a> StreamHandler<WsMsg> for FtsQuery<'a, EventInfo<'_>>
 where
     'a: 'static,
 {

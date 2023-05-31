@@ -8,7 +8,6 @@ use super::v_models::{
     ActiveEvent, AsyncDbRes, EndEvent, Event, NewEvent, Player, Team, User, VaderEvent,
 };
 
-#[derive(Debug)]
 pub enum EventStateWrapper<'a, T: Player<'a>> {
     New(Event<'a, T, NewEvent>),
     Active(Event<'a, T, ActiveEvent>),
@@ -47,10 +46,9 @@ where
         }
     }
 }
-#[derive(Debug)]
 pub enum EventWrapper<'a> {
-    TeamEvent(EventStateWrapper<'a, Team>),
-    UserEvent(EventStateWrapper<'a, User>),
+    TeamEvent(EventStateWrapper<'a, Team<'a>>),
+    UserEvent(EventStateWrapper<'a, User<'a>>),
 }
 impl<'a> EventWrapper<'a> {
     pub fn start_event(&mut self) -> Result<(), VaderError> {
@@ -117,7 +115,10 @@ impl<'a> EventWrapper<'a> {
             },
         }
     }
-    pub fn add_team(&self, team: Team, db_pool: &'a SqlitePool) -> AsyncDbRes<()> {
+    pub fn add_team<'b>(&'a self, team: Team<'b>, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()>
+    where
+        'b: 'a,
+    {
         match self {
             Self::TeamEvent(sw) => match sw {
                 EventStateWrapper::New(e) => Box::pin(async move {

@@ -14,11 +14,14 @@ use crate::models::v_models::{AdminInfo, AppState, Event, Team, User, VaderEvent
 use crate::models::wrapper_models::{EventStateWrapper, EventWrapper};
 
 #[post("/event/add")]
-pub async fn add_event(
-    event_data: web::Json<EventReq>,
+pub async fn add_event<'a>(
+    event_data: web::Json<EventReq<'a>>,
     app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
-) -> Either<impl Responder, impl Responder> {
+) -> Either<impl Responder, impl Responder>
+where
+    'a: 'static,
+{
     let event_data = event_data.into_inner();
     match event_data.event_type {
         EventType::TeamEvent => Either::Left(add_team_event(event_data, app_state, db_pool).await),
@@ -26,13 +29,15 @@ pub async fn add_event(
     }
 }
 
-pub async fn add_team_event(
-    event_info: EventReq,
+pub async fn add_team_event<'a>(
+    event_info: EventReq<'a>,
     app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
-) -> impl Responder {
+) -> impl Responder
+where
+    'a: 'static,
+{
     let mut event_state = app_state.current_event.lock().await;
-    log::debug!("app_state : {:?}", event_state);
     if event_state.is_some() {
         error!("Request delined.Another Event already added.");
         return HttpResponse::BadRequest()
@@ -55,11 +60,14 @@ pub async fn add_team_event(
         }
     }
 }
-pub async fn add_user_event(
-    event_info: EventReq,
+pub async fn add_user_event<'a>(
+    event_info: EventReq<'a>,
     app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
-) -> impl Responder {
+) -> impl Responder
+where
+    'a: 'static,
+{
     let mut event_state = app_state.current_event.lock().await;
     if event_state.is_some() {
         error!("Request delined.Another Event already added.");
@@ -194,12 +202,11 @@ pub async fn reset_score(
 }
 #[post("/event/team/add")]
 pub async fn add_team(
-    c_info: web::Json<ContestantInfo>,
+    c_info: web::Json<ContestantInfo<'_>>,
     app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let event_state = app_state.current_event.lock().await;
-    log::debug!("{:?}", event_state);
     if event_state.is_none() {
         error!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to start event")
@@ -225,7 +232,7 @@ pub async fn add_team(
 
 #[post("/event/user/add/")]
 pub async fn add_user(
-    c_info: web::Json<ContestantInfo>,
+    c_info: web::Json<ContestantInfo<'_>>,
     app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
