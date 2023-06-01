@@ -1,6 +1,10 @@
-
+import Login from "./pages/Login";
 const App = () => {
-  return <h1>VaderBoard Admin Panel</h1>;
+    return (
+        <>
+            <Login />
+        </>
+    );
 };
 
 export default App;

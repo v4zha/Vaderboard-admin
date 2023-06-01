@@ -78,7 +78,7 @@ impl<'a> EventWrapper<'a> {
         p_id: &Uuid,
         score: i64,
         db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a, ()> {
+    ) -> AsyncDbRes<'a, i32> {
         match self {
             Self::TeamEvent(sw) => match sw {
                 EventStateWrapper::Active(e) => e.update_score_by_id(p_id, score, db_pool),

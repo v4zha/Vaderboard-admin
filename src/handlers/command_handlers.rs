@@ -6,7 +6,7 @@ use log::{error, info};
 use sqlx::SqlitePool;
 
 use crate::models::command_models::{
-    CommandResponse, ContestantInfo, EventReq, MemberInfo, ScoreUpdate,
+    CommandResponse, ContestantInfo, EventReq, MemberInfo, ScoreResponse, ScoreUpdate,
 };
 use crate::models::error_models::VaderError;
 use crate::models::query_models::{EventInfo, EventType, IdQuery, VboardRes};
@@ -166,8 +166,8 @@ pub async fn update_score(
             .update_score_by_id(&sr.id, sr.score, &db_pool)
             .await;
         match score_res {
-            Ok(_) => {
-                info!("Score updated successfully");
+            Ok(new_score) => {
+                info!("Score updated successfully.New score : {}", new_score);
                 let vb_res = event_state.as_ref().unwrap().get_vboard(&db_pool, 10).await;
                 match vb_res {
                     Ok(vb_str) => {
@@ -178,7 +178,7 @@ pub async fn update_score(
                     }
                     Err(e) => log::debug!("Error sending Vaderboard : {}", e),
                 }
-                HttpResponse::Ok().body("Score updated successfully")
+                HttpResponse::Ok().json(web::Json(ScoreResponse::new(sr.id, new_score)))
             }
             Err(err) => {
                 error!("Error updating score :\n[error] : {}", err);

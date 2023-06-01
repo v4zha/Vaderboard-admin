@@ -57,7 +57,7 @@ async fn main() -> std::io::Result<()> {
             .service(login)
             .service(
                 web::scope("/admin")
-                    // .wrap(AdminOnlyGuard)
+                    .wrap(AdminOnlyGuard)
                     .service(add_event)
                     .service(add_user)
                     .service(add_team)

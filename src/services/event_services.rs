@@ -206,21 +206,20 @@ impl<'a> Event<'a, User<'a>, ActiveEvent> {
         user_id: &Uuid,
         points: i64,
         db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a, ()> {
+    ) -> AsyncDbRes<'a, i32> {
         let id = user_id.to_string();
         Box::pin(async move {
-            let res = sqlx::query!("UPDATE users set score=score+? WHERE id=?", points, id)
-                .execute(db_pool)
-                .await;
+            let res = sqlx::query_as::<_, (i32,)>(
+                "UPDATE users set score=score+? WHERE id=? RETURNING score",
+            )
+            .bind(points)
+            .bind(id)
+            .fetch_one(db_pool)
+            .await;
             match res {
-                Ok(c) => {
-                    if c.rows_affected().eq(&0) {
-                        return Err(VaderError::UserNotFound("No User Found to update Score"));
-                    }
-                }
+                Ok(score) => Ok(score.0),
                 Err(err) => return Err(VaderError::SqlxError(err)),
             }
-            Ok(())
         })
     }
 }
@@ -242,21 +241,20 @@ impl<'a> Event<'a, Team<'a>, ActiveEvent> {
         team_id: &Uuid,
         points: i64,
         db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a, ()> {
+    ) -> AsyncDbRes<'a, i32> {
         let id = team_id.to_string();
         Box::pin(async move {
-            let res = sqlx::query!("UPDATE teams set score=score+? WHERE id=?", points, id)
-                .execute(db_pool)
-                .await;
+            let res = sqlx::query_as::<_, (i32,)>(
+                "UPDATE teams set score=score+? WHERE id=? RETURNING score",
+            )
+            .bind(points)
+            .bind(id)
+            .fetch_one(db_pool)
+            .await;
             match res {
-                Ok(c) => {
-                    if c.rows_affected().eq(&0) {
-                        return Err(VaderError::TeamNotFound("No Team Found to update Score"));
-                    }
-                }
+                Ok(score) => Ok(score.0),
                 Err(err) => return Err(VaderError::SqlxError(err)),
             }
-            Ok(())
         })
     }
 }
