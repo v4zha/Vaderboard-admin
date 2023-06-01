@@ -393,6 +393,14 @@ impl<'a> User<'a> {
             Ok(())
         })
     }
+    pub fn get_all_user(db_pool: &SqlitePool) -> AsyncDbRes<'_, Vec<Self>> {
+        Box::pin(async move {
+            let users = sqlx::query_as::<_, User>("SELECT id,name,score,logo from users")
+                .fetch_all(db_pool)
+                .await?;
+            Ok(users)
+        })
+    }
 }
 
 pub trait VbStateMarker {}

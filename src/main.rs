@@ -14,6 +14,7 @@ mod handlers;
 mod models;
 mod services;
 
+use actix_cors::Cors;
 use actix_files::Files;
 
 use crate::handlers::command_handlers::{
@@ -21,8 +22,8 @@ use crate::handlers::command_handlers::{
     end_event, login, reset_score, start_event, update_score,
 };
 use crate::handlers::query_handlers::{
-    event_fts, get_current_event, get_event_info, get_team_info, get_user_info, team_fts, user_fts,
-    vaderboard,
+    event_fts, get_all_event, get_all_team, get_all_user, get_current_event, get_event_info,
+    get_team_info, get_user_info, team_fts, user_fts, vaderboard,
 };
 use crate::models::v_models::AppState;
 use crate::services::v_middlewares::AdminOnlyGuard;
@@ -52,6 +53,8 @@ async fn main() -> std::io::Result<()> {
                 CookieSessionStore::default(),
                 session_key.clone(),
             ))
+            //Cors allow all origin Added for testing * : )
+            .wrap(Cors::default().allow_any_origin())
             .app_data(Data::new(app_state.clone()))
             .app_data(Data::new(db_pool.clone()))
             .service(login)
@@ -65,15 +68,18 @@ async fn main() -> std::io::Result<()> {
                     .service(start_event)
                     .service(update_score)
                     .service(reset_score)
-                    .service(get_user_info)
                     .service(delete_event)
                     .service(delete_team)
                     .service(delete_user)
                     .service(end_event),
             )
             .service(get_current_event)
+            .service(get_all_event)
             .service(get_event_info)
+            .service(get_all_team)
             .service(get_team_info)
+            .service(get_all_user)
+            .service(get_user_info)
             .service(event_fts)
             .service(team_fts)
             .service(user_fts)

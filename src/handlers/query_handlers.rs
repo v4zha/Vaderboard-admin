@@ -40,6 +40,16 @@ pub async fn get_event_info(
         Err(e) => HttpResponse::BadRequest().body(e.to_string()),
     }
 }
+
+#[get("/event/info/all")]
+pub async fn get_all_event(db_pool: web::Data<SqlitePool>) -> impl Responder {
+    let res: Result<Vec<EventInfo>, VaderError> = EventInfo::get_all_event_info(&db_pool).await;
+    match res {
+        Ok(event) => HttpResponse::Ok().json(web::Json(event)),
+        Err(e) => HttpResponse::BadRequest().body(e.to_string()),
+    }
+}
+
 #[get("/team/info")]
 pub async fn get_team_info(
     id_info: web::Json<IdQuery>,
@@ -52,6 +62,15 @@ pub async fn get_team_info(
     }
 }
 
+#[get("/team/info/all")]
+pub async fn get_all_team(db_pool: web::Data<SqlitePool>) -> impl Responder {
+    let res: Result<Vec<TeamInfo>, VaderError> = TeamInfo::get_all_team_info(&db_pool).await;
+    match res {
+        Ok(event) => HttpResponse::Ok().json(web::Json(event)),
+        Err(e) => HttpResponse::BadRequest().body(e.to_string()),
+    }
+}
+
 #[get("/user/info")]
 pub async fn get_user_info(
     id_info: web::Json<IdQuery>,
@@ -60,6 +79,15 @@ pub async fn get_user_info(
     let id = id_info.into_inner().id;
     match User::get_user(&id, &db_pool).await {
         Ok(user) => HttpResponse::Ok().json(web::Json(user)),
+        Err(e) => HttpResponse::BadRequest().body(e.to_string()),
+    }
+}
+
+#[get("/user/info/all")]
+pub async fn get_all_user(db_pool: web::Data<SqlitePool>) -> impl Responder {
+    let res: Result<Vec<User>, VaderError> = User::get_all_user(&db_pool).await;
+    match res {
+        Ok(event) => HttpResponse::Ok().json(web::Json(event)),
         Err(e) => HttpResponse::BadRequest().body(e.to_string()),
     }
 }

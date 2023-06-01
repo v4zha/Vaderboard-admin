@@ -204,6 +204,25 @@ impl EventInfo<'_> {
             Ok(event)
         })
     }
+    pub fn get_all_event_info(db_pool: &SqlitePool) -> AsyncDbRes<'_, Vec<Self>> {
+        Box::pin(async move {
+            let event =
+                sqlx::query_as::<_, EventInfo>("SELECT id,name,logo,event_type from events")
+                    .fetch_all(db_pool)
+                    .await?;
+            Ok(event)
+        })
+    }
+}
+impl TeamInfo<'_> {
+    pub fn get_all_team_info(db_pool: &SqlitePool) -> AsyncDbRes<'_, Vec<Self>> {
+        Box::pin(async move {
+            let teams = sqlx::query_as::<_, TeamInfo>("SELECT id,name,score,logo from teams")
+                .fetch_all(db_pool)
+                .await?;
+            Ok(teams)
+        })
+    }
 }
 
 pub trait Queriable {
