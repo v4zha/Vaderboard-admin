@@ -2,6 +2,8 @@ use std::borrow::Cow;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+use actix::{Actor, Message};
+use actix_web_actors::ws;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use uuid::Uuid;
@@ -13,7 +15,7 @@ use crate::services::query_services::Queriable;
 pub struct EventQuery<'a, T: Player<'a>> {
     pub id: Uuid,
     pub name: Cow<'a, str>,
-    pub logo: Option<String>,
+    pub logo: Option<Cow<'a, str>>,
     pub contestants: Vec<T>,
     pub event_type: EventType,
     #[serde(skip_serializing)]
@@ -35,7 +37,7 @@ pub struct IdQuery {
 pub struct EventInfo<'a> {
     pub id: Uuid,
     pub name: Cow<'a, str>,
-    pub logo: Option<String>,
+    pub logo: Option<Cow<'a, str>>,
     pub event_type: EventType,
 }
 
@@ -44,7 +46,7 @@ pub struct TeamInfo<'a> {
     pub id: Uuid,
     pub name: Cow<'a, str>,
     pub score: i64,
-    pub logo: Option<String>,
+    pub logo: Option<Cow<'a, str>>,
 }
 
 pub struct FtsQuery<'a, T: Queriable> {
@@ -61,4 +63,14 @@ where
             type_marker: PhantomData::<&'a T>,
         }
     }
+}
+
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct VboardRes<'a>(pub Cow<'a, str>);
+
+pub struct Vboard {}
+
+impl Actor for Vboard {
+    type Context = ws::WebsocketContext<Self>;
 }

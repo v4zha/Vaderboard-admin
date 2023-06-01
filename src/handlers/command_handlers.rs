@@ -9,7 +9,7 @@ use crate::models::command_models::{
     CommandResponse, ContestantInfo, EventReq, MemberInfo, ScoreUpdate,
 };
 use crate::models::error_models::VaderError;
-use crate::models::query_models::{EventInfo, EventType, IdQuery};
+use crate::models::query_models::{EventInfo, EventType, IdQuery, VboardRes};
 use crate::models::v_models::{AdminInfo, AppState, Event, Team, User, VaderEvent};
 use crate::models::wrapper_models::{EventStateWrapper, EventWrapper};
 
@@ -160,14 +160,24 @@ pub async fn update_score(
         HttpResponse::BadRequest().body("No event added.Add event to start event")
     } else {
         let sr = score_req.into_inner();
-        let res = event_state
+        let score_res = event_state
             .as_ref()
             .unwrap()
             .update_score_by_id(&sr.id, sr.score, &db_pool)
             .await;
-        match res {
+        match score_res {
             Ok(_) => {
                 info!("Score updated successfully");
+                let vb_res = event_state.as_ref().unwrap().get_vboard(&db_pool, 10).await;
+                match vb_res {
+                    Ok(vb_str) => {
+                        let vb_addr = app_state.vb_addr.lock().await;
+                        vb_addr
+                            .iter()
+                            .for_each(|addr| addr.do_send(VboardRes(vb_str.clone())));
+                    }
+                    Err(e) => log::debug!("Error sending Vaderboard : {}", e),
+                }
                 HttpResponse::Ok().body("Score updated successfully")
             }
             Err(err) => {

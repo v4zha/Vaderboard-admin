@@ -35,7 +35,7 @@ impl FromRow<'_, SqliteRow> for Team<'_> {
         Ok(Team {
             id,
             name: name.into(),
-            logo,
+            logo: logo.map(|s| s.into()),
             score,
             members,
         })
@@ -53,7 +53,7 @@ impl FromRow<'_, SqliteRow> for User<'_> {
         Ok(User {
             id,
             name: name.into(),
-            logo,
+            logo: logo.map(|s| s.into()),
             score,
         })
     }
@@ -71,7 +71,7 @@ impl FromRow<'_, SqliteRow> for TeamInfo<'_> {
         Ok(TeamInfo {
             id,
             name: name.into(),
-            logo,
+            logo: logo.map(|s| s.into()),
             score,
         })
     }
@@ -95,7 +95,7 @@ where
         Ok(Event {
             id,
             name: name.into(),
-            logo,
+            logo: logo.map(|s| s.into()),
             player_marker: PhantomData::<&'a T>,
             state_marker: PhantomData::<&'a U>,
         })
@@ -185,7 +185,7 @@ impl<'a, 'b> FromRow<'a, SqliteRow> for EventInfo<'b> {
         Ok(EventInfo {
             id,
             name: name.into(),
-            logo,
+            logo: logo.map(|s| s.into()),
             event_type,
         })
     }
@@ -287,8 +287,6 @@ where
     type Context = ws::WebsocketContext<Self>;
 }
 
-type WsMsg = Result<ws::Message, ws::ProtocolError>;
-
 impl<'a> Handler<FtsQueryRes> for FtsQuery<'a, TeamInfo<'_>>
 where
     'a: 'static,
@@ -300,11 +298,11 @@ where
     }
 }
 
-impl<'a> StreamHandler<WsMsg> for FtsQuery<'a, TeamInfo<'_>>
+impl<'a> StreamHandler<Result<ws::Message, ws::ProtocolError>> for FtsQuery<'a, TeamInfo<'_>>
 where
     'a: 'static,
 {
-    fn handle(&mut self, msg: WsMsg, ctx: &mut Self::Context) {
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         use ws::Message::*;
         let pool = self.db_pool.clone();
         let addr = ctx.address();
@@ -312,12 +310,12 @@ where
             Ok(Ping(msg)) => ctx.pong(&msg),
             Ok(Text(param)) => {
                 async move {
-                    let teams = TeamInfo::fts_query(&param, &pool)
+                    let res = TeamInfo::fts_query(&param, &pool)
                         .await
-                        .ok()
-                        .and_then(|t| serde_json::to_string(&t).ok());
-                    if let Some(teams_str) = teams {
-                        addr.do_send(FtsQueryRes(teams_str))
+                        .and_then(|teams| Ok(serde_json::to_string(&teams)?));
+                    match res {
+                        Ok(teams) => addr.do_send(FtsQueryRes(teams)),
+                        Err(e) => log::debug!("Error Getting Teams Fts : {}", e),
                     }
                 }
                 .into_actor(self)
@@ -346,11 +344,11 @@ where
     }
 }
 
-impl<'a> StreamHandler<WsMsg> for FtsQuery<'a, User<'_>>
+impl<'a> StreamHandler<Result<ws::Message, ws::ProtocolError>> for FtsQuery<'a, User<'_>>
 where
     'a: 'static,
 {
-    fn handle(&mut self, msg: WsMsg, ctx: &mut Self::Context) {
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         use ws::Message::*;
         let pool = self.db_pool.clone();
         let addr = ctx.address();
@@ -358,12 +356,12 @@ where
             Ok(Ping(msg)) => ctx.pong(&msg),
             Ok(Text(param)) => {
                 async move {
-                    let users = User::fts_query(&param, &pool)
+                    let res = User::fts_query(&param, &pool)
                         .await
-                        .ok()
-                        .and_then(|t| serde_json::to_string(&t).ok());
-                    if let Some(users_str) = users {
-                        addr.do_send(FtsQueryRes(users_str))
+                        .and_then(|users| Ok(serde_json::to_string(&users)?));
+                    match res {
+                        Ok(users) => addr.do_send(FtsQueryRes(users)),
+                        Err(e) => log::debug!("Error Getting Users Fts : {}", e),
                     }
                 }
                 .into_actor(self)
@@ -392,11 +390,11 @@ where
     }
 }
 
-impl<'a> StreamHandler<WsMsg> for FtsQuery<'a, EventInfo<'_>>
+impl<'a> StreamHandler<Result<ws::Message, ws::ProtocolError>> for FtsQuery<'a, EventInfo<'_>>
 where
     'a: 'static,
 {
-    fn handle(&mut self, msg: WsMsg, ctx: &mut Self::Context) {
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         use ws::Message::*;
         let pool = self.db_pool.clone();
         let addr = ctx.address();
@@ -404,12 +402,12 @@ where
             Ok(Ping(msg)) => ctx.pong(&msg),
             Ok(Text(param)) => {
                 async move {
-                    let events = EventInfo::fts_query(&param, &pool)
+                    let res = EventInfo::fts_query(&param, &pool)
                         .await
-                        .ok()
-                        .and_then(|t| serde_json::to_string(&t).ok());
-                    if let Some(events_str) = events {
-                        addr.do_send(FtsQueryRes(events_str))
+                        .and_then(|events| Ok(serde_json::to_string(&events)?));
+                    match res {
+                        Ok(events_str) => addr.do_send(FtsQueryRes(events_str)),
+                        Err(e) => log::debug!("Error Getting Events Fts : {}", e),
                     }
                 }
                 .into_actor(self)

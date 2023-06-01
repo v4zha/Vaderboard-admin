@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
-use actix_web_actors::ws;
+use actix_web_actors::ws::{self, WsResponseBuilder};
 use erased_serde::Serialize as ErasedSerialize;
 use log::debug;
 use sqlx::SqlitePool;
 
 use crate::models::error_models::VaderError;
-use crate::models::query_models::{EventInfo, FtsQuery, IdQuery, TeamInfo};
+use crate::models::query_models::{EventInfo, FtsQuery, IdQuery, TeamInfo, Vboard};
 use crate::models::v_models::{AppState, Team, User};
 
 #[get("/event/info")]
@@ -102,7 +102,6 @@ pub async fn user_fts(
 pub async fn vaderboard(
     req: HttpRequest,
     app_state: web::Data<Arc<AppState>>,
-    db_pool: web::Data<SqlitePool>,
     stream: web::Payload,
 ) -> impl Responder {
     let event_state = app_state.current_event.lock().await;
@@ -110,7 +109,21 @@ pub async fn vaderboard(
         debug!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to Fetch details")
     } else {
-        // ws::start(,&req,stream)
-        todo!()
+        let vb = Vboard {};
+        let wsb_res = WsResponseBuilder::new(vb, &req, stream).start_with_addr();
+        match wsb_res {
+            Ok(ws_res) => {
+                let mut addrs = app_state.vb_addr.lock().await;
+                addrs.push(ws_res.0);
+                ws_res.1
+            }
+            Err(e) => {
+                log::error!(
+                    "[Error] : Unable to build websocket responder : {}",
+                    e.to_string()
+                );
+                HttpResponse::BadRequest().body("Unable to connect")
+            }
+        }
     }
 }

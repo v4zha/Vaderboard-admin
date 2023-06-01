@@ -4,9 +4,11 @@ use std::marker::PhantomData;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
+use super::query_services::Queriable;
 use crate::models::error_models::VaderError;
+use crate::models::query_models::TeamInfo;
 use crate::models::v_models::{
-    ActiveEvent, AsyncDbRes, EndEvent, Event, NewEvent, Player, Team, User, VaderEvent,
+    ActiveEvent, AsyncDbRes, EndEvent, Event, EventState, NewEvent, Player, Team, User, VaderEvent,
 };
 
 impl<'a> Player<'a> for User<'a> {
@@ -31,7 +33,7 @@ impl<'a> Player<'a> for User<'a> {
         self.id
     }
     fn get_logo(&self) -> String {
-        self.logo.as_ref().unwrap_or(&String::new()).to_string()
+        self.logo.clone().unwrap_or(Cow::Borrowed("")).to_string()
     }
 }
 
@@ -57,7 +59,7 @@ impl<'a> Player<'a> for Team<'a> {
         self.id
     }
     fn get_logo(&self) -> String {
-        self.logo.as_ref().unwrap_or(&String::new()).to_string()
+        self.logo.clone().unwrap_or(Cow::Borrowed("")).to_string()
     }
 }
 impl<'a> Team<'a> {
@@ -145,7 +147,7 @@ impl<'a> VaderEvent<'a> for Event<'a, Team<'a>> {
         })
     }
     fn get_logo(&self) -> String {
-        self.logo.as_ref().unwrap_or(&String::new()).to_string()
+        self.logo.clone().unwrap_or(Cow::Borrowed("")).to_string()
     }
 }
 
@@ -194,7 +196,7 @@ impl<'a> VaderEvent<'a> for Event<'a, User<'a>> {
         })
     }
     fn get_logo(&self) -> String {
-        self.logo.as_ref().unwrap_or(&String::new()).to_string()
+        self.logo.clone().unwrap_or(Cow::Borrowed("")).to_string()
     }
 }
 
@@ -305,7 +307,7 @@ where
         Event {
             id: e.id,
             name: e.name.clone(),
-            logo: e.logo.to_owned(),
+            logo: e.logo.clone(),
             player_marker: PhantomData::<&'a T>,
             state_marker: PhantomData::<&'a ActiveEvent>,
         }
@@ -319,7 +321,7 @@ where
         Event {
             id: e.id,
             name: e.name.clone(),
-            logo: e.logo.to_owned(),
+            logo: e.logo.clone(),
             player_marker: PhantomData::<&'a T>,
             state_marker: PhantomData::<&'a EndEvent>,
         }
@@ -327,7 +329,7 @@ where
 }
 
 impl<'a> Team<'a> {
-    pub fn new(name: Cow<'a, str>, logo: Option<String>) -> Self {
+    pub fn new(name: Cow<'a, str>, logo: Option<Cow<'a, str>>) -> Self {
         Self {
             id: Uuid::new_v4(),
             name,
@@ -362,7 +364,7 @@ impl<'a> Team<'a> {
     }
 }
 impl<'a> User<'a> {
-    pub fn new(name: Cow<'a, str>, logo: Option<String>) -> Self {
+    pub fn new(name: Cow<'a, str>, logo: Option<Cow<'a, str>>) -> Self {
         Self {
             id: Uuid::new_v4(),
             name,
@@ -391,6 +393,65 @@ impl<'a> User<'a> {
                 return Err(VaderError::UserNotFound("No User found"));
             }
             Ok(())
+        })
+    }
+}
+
+pub trait VbStateMarker {}
+impl VbStateMarker for ActiveEvent {}
+impl VbStateMarker for EndEvent {}
+
+pub trait VaderBoard<'a> {
+    type VbRes: Queriable;
+    fn get_vboard<'b>(
+        &'a self,
+        db_pool: &'b SqlitePool,
+        count: u32,
+    ) -> AsyncDbRes<'a, Vec<Self::VbRes>>
+    where
+        'b: 'a;
+}
+
+impl<'a, S: VbStateMarker + EventState> VaderBoard<'a> for Event<'a, Team<'a>, S> {
+    type VbRes = TeamInfo<'a>;
+    fn get_vboard<'b>(
+        &'a self,
+        db_pool: &'b SqlitePool,
+        count: u32,
+    ) -> AsyncDbRes<'a, Vec<Self::VbRes>>
+    where
+        'b: 'a,
+    {
+        Box::pin(async move {
+            let teams = sqlx::query_as::<_, TeamInfo>(
+                "SELECT id,name,score,logo FROM teams ORDER BY score DESC LIMIT ?",
+            )
+            .bind(count)
+            .fetch_all(db_pool)
+            .await?;
+            Ok(teams)
+        })
+    }
+}
+
+impl<'a, S: VbStateMarker + EventState> VaderBoard<'a> for Event<'a, User<'a>, S> {
+    type VbRes = User<'a>;
+    fn get_vboard<'b>(
+        &'a self,
+        db_pool: &'b SqlitePool,
+        count: u32,
+    ) -> AsyncDbRes<'a, Vec<Self::VbRes>>
+    where
+        'b: 'a,
+    {
+        Box::pin(async move {
+            let users = sqlx::query_as::<_, User>(
+                "SELECT id,name,score,logo FROM users ORDER BY score DESC LIMIT ?",
+            )
+            .bind(count)
+            .fetch_all(db_pool)
+            .await?;
+            Ok(users)
         })
     }
 }

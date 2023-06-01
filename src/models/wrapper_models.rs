@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use erased_serde::Serialize as ErasedSerialize;
 use sqlx::SqlitePool;
 use uuid::Uuid;
@@ -7,6 +9,7 @@ use super::error_models::VaderError;
 use super::v_models::{
     ActiveEvent, AsyncDbRes, EndEvent, Event, NewEvent, Player, Team, User, VaderEvent,
 };
+use crate::services::event_services::VaderBoard;
 
 pub enum EventStateWrapper<'a, T: Player<'a>> {
     New(Event<'a, T, NewEvent>),
@@ -162,9 +165,7 @@ impl<'a> EventWrapper<'a> {
     pub fn add_user(&self, user: &'a User, db_pool: &'a SqlitePool) -> AsyncDbRes<()> {
         match self {
             Self::TeamEvent(sw) => match sw {
-                EventStateWrapper::New(_) => {
-                    Box::pin(async move { user.add_player(db_pool).await })
-                }
+                EventStateWrapper::New(_) => user.add_player(db_pool),
                 _ => Box::pin(async move {
                     Err(VaderError::EventActive(
                         "User cannot be added as Event already started",
@@ -215,6 +216,48 @@ impl<'a> EventWrapper<'a> {
                 EventStateWrapper::End(e) => Box::pin(async move {
                     let event = e.get_info(db_pool).await?;
                     Ok(Box::new(event) as Box<dyn ErasedSerialize>)
+                }),
+            },
+        }
+    }
+    pub fn get_vboard(
+        &'a self,
+        db_pool: &'a SqlitePool,
+        count: u32,
+    ) -> AsyncDbRes<'a, Cow<'static, str>> {
+        match self {
+            Self::TeamEvent(sw) => match sw {
+                EventStateWrapper::Active(e) => Box::pin(async move {
+                    let res = e.get_vboard(db_pool, count).await?;
+                    let team_str = serde_json::to_string(&res)?;
+                    Ok(team_str.into())
+                }),
+                EventStateWrapper::End(e) => Box::pin(async move {
+                    let res = e.get_vboard(db_pool, count).await?;
+                    let team_str = serde_json::to_string(&res)?;
+                    Ok(team_str.into())
+                }),
+                EventStateWrapper::New(_) => Box::pin(async move {
+                    Err(VaderError::EventNotActive(
+                        "Event not Active to get Leaderboard",
+                    ))
+                }),
+            },
+            Self::UserEvent(sw) => match sw {
+                EventStateWrapper::Active(e) => Box::pin(async move {
+                    let res = e.get_vboard(db_pool, count).await?;
+                    let users_str = serde_json::to_string(&res)?;
+                    Ok(users_str.into())
+                }),
+                EventStateWrapper::End(e) => Box::pin(async move {
+                    let res = e.get_vboard(db_pool, count).await?;
+                    let users_str = serde_json::to_string(&res)?;
+                    Ok(users_str.into())
+                }),
+                EventStateWrapper::New(_) => Box::pin(async move {
+                    Err(VaderError::EventNotActive(
+                        "Event not Active to get Leaderboard",
+                    ))
                 }),
             },
         }

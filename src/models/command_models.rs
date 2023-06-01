@@ -10,7 +10,7 @@ use super::v_models::{Event, Team, User};
 pub struct EventReq<'a> {
     name: Cow<'a, str>,
     #[serde(default)]
-    logo: Option<String>,
+    logo: Option<Cow<'a, str>>,
     pub event_type: EventType,
 }
 impl<'a> From<EventReq<'a>> for Event<'a, Team<'a>> {
@@ -33,7 +33,7 @@ pub struct ScoreUpdate {
 pub struct ContestantInfo<'a> {
     name: Cow<'a, str>,
     #[serde(default)]
-    logo: Option<String>,
+    logo: Option<Cow<'a, str>>,
 }
 
 impl<'a> From<ContestantInfo<'a>> for User<'a> {

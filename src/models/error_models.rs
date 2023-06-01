@@ -17,6 +17,7 @@ pub enum VaderError<'a> {
     UserNotFound(&'a str),
     AdminHashError(BcryptError),
     BlockingOpError(BlockingError),
+    SerdeJsonError(serde_json::Error),
 }
 
 impl<'a> From<sqlx::Error> for VaderError<'a> {
@@ -33,6 +34,11 @@ impl<'a> From<BcryptError> for VaderError<'a> {
 impl<'a> From<BlockingError> for VaderError<'a> {
     fn from(value: BlockingError) -> Self {
         Self::BlockingOpError(value)
+    }
+}
+impl<'a> From<serde_json::Error> for VaderError<'a> {
+    fn from(value: serde_json::Error) -> Self {
+        Self::SerdeJsonError(value)
     }
 }
 
@@ -75,6 +81,13 @@ impl<'a> Display for VaderError<'a> {
                 write!(
                     f,
                     "Error in performing blocking operation.\n[error] : {}",
+                    e.to_string()
+                )
+            }
+            VaderError::SerdeJsonError(e) => {
+                write!(
+                    f,
+                    "Error in serializing object.\n[error] : {}",
                     e.to_string()
                 )
             }
