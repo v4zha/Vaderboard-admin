@@ -129,7 +129,7 @@ impl<'a> VaderEvent<'a> for Event<'a, Team<'a>> {
         })
     }
 
-    fn add_event(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
+    fn add_event(&'a self, team_size: u32, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
         let logo = self.get_logo();
         let id = self.id.to_string();
         let name = &self.name;
@@ -139,7 +139,7 @@ impl<'a> VaderEvent<'a> for Event<'a, Team<'a>> {
                 id,
                 name,
                 logo,
-                "team_event"
+                "team_event",
             )
             .execute(db_pool)
             .await?;

@@ -2,7 +2,8 @@ CREATE TABLE events (
     id UUID PRIMARY KEY,
     name TEXT UNIQUE,
     logo TEXT ,
-    event_type TEXT
+    event_type TEXT,
+  team_size INTEGER DEFAULT NULL
 );
 
 CREATE TABLE teams (
@@ -58,6 +59,24 @@ CREATE TABLE admin_login (
   password TEXT UNIQUE
 );
 
+
+
+-- Team Size validation trigger 
+
+CREATE TRIGGER team_size_check BEFORE INSERT ON events FOR EACH ROW 
+WHEN ( NEW.event_type='team_event' AND NEW.team_size IS NULL ) 
+BEGIN 
+  SELECT RAISE(ABORT,'team_size cannot be null for team_event');
+END;
+
+-- Check max Team members count trigger  
+CREATE TRIGGER team_members_check BEFORE INSERT ON  team_members FOR EACH ROW
+WHEN ( SELECT COUNT(*) FROM team_members WHERE team_id=NEW.team_id ) > (
+      SELECT team_size FROM events WHERE id=(SELECT event_id FROM event_teams WHERE team_id=NEW.team_id ) ) 
+BEGIN
+    SELECT RAISE(ABORT,'Count of team_members exceeds team_size');
+END;
+
 -- create Virtual tables for FTS5 : )
 CREATE VIRTUAL TABLE events_fts USING FTS5(id,name,logo,event_type,content='events');
 CREATE VIRTUAL TABLE users_fts USING FTS5(id,name,score,logo,content='users');
@@ -102,5 +121,6 @@ END;
 CREATE TRIGGER teams_fts_delete AFTER DELETE ON teams BEGIN
   DELETE FROM teams_fts WHERE id=old.id;
 END;
+
 
 
