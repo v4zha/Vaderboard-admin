@@ -24,7 +24,7 @@ where
 {
     let event_data = event_data.into_inner();
     match event_data.event_type {
-        EventType::TeamEvent(_) => {
+        EventType::TeamEvent { team_size: _ } => {
             Either::Left(add_team_event(event_data, app_state, db_pool).await)
         }
         EventType::UserEvent => Either::Right(add_user_event(event_data, app_state, db_pool).await),
@@ -342,7 +342,9 @@ pub async fn delete_event(
     let info_res: Result<EventInfo, VaderError> = EventInfo::get_event_info(&id, &db_pool).await;
     let res = match info_res {
         Ok(event) => match event.event_type {
-            EventType::TeamEvent(_) => Event::<Team>::delete_event(&id, &db_pool).await,
+            EventType::TeamEvent { team_size: _ } => {
+                Event::<Team>::delete_event(&id, &db_pool).await
+            }
             EventType::UserEvent => Event::<User>::delete_event(&id, &db_pool).await,
         },
         Err(e) => {

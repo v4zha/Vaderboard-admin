@@ -18,7 +18,7 @@ pub struct EventReq<'a> {
 impl<'a> From<EventReq<'a>> for Result<Event<'a, Team<'a>>, VaderError<'a>> {
     fn from(req: EventReq<'a>) -> Self {
         match req.event_type {
-            EventType::TeamEvent(team_size) => {
+            EventType::TeamEvent { team_size } => {
                 Ok(Event::<Team>::new(req.name, req.logo, Some(team_size)))
             }
             EventType::UserEvent => {

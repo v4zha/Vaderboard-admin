@@ -70,19 +70,11 @@ BEGIN
 END;
 
 -- Check max Team members count trigger  
-CREATE TRIGGER team_members_size_check BEFORE INSERT ON  team_members FOR EACH ROW
-WHEN ( SELECT COUNT(*) FROM team_members WHERE team_id=NEW.team_id ) > (
+CREATE TRIGGER team_members_check BEFORE INSERT ON  team_members FOR EACH ROW
+WHEN ( SELECT COUNT(*) FROM team_members WHERE team_id=NEW.team_id ) >= (
       SELECT team_size FROM events WHERE id=(SELECT event_id FROM event_teams WHERE team_id=NEW.team_id ) ) 
 BEGIN
     SELECT RAISE(ABORT,'Count of team_members exceeds team_size');
-END;
-
--- Check max Team size on event_teams insertion
-CREATE TRIGGER event_teams_size_check BEFORE INSERT on event_teams FOR EACH ROW
-WHEN ( SELECT COUNT(*) FROM team_members WHERE team_id=NEW.team_id ) > ( 
-  SELECT team_size FROM events where id=NEW.event_id )
-BEGIN
-  SELECT RAISE(ABORT,'Count of team_members exceeds team_size');
 END;
 
 -- create Virtual tables for FTS5 : )

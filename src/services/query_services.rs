@@ -126,7 +126,7 @@ where
                     name: event.name,
                     logo: event.logo,
                     contestants,
-                    event_type: EventType::TeamEvent(team_size),
+                    event_type: EventType::TeamEvent { team_size },
                     marker: PhantomData::<&'a Team>,
                 })
             } else {
@@ -179,7 +179,7 @@ impl<'a, 'b> FromRow<'a, SqliteRow> for EventInfo<'b> {
         let team_size: Option<u32> = row.get("team_size");
         let event_type = match type_str.as_str() {
             "team_event" => match team_size {
-                Some(ts) => EventType::TeamEvent(ts),
+                Some(team_size) => EventType::TeamEvent { team_size },
                 None => {
                     return Err(sqlx::Error::ColumnDecode {
                         index: "0".to_string(),
