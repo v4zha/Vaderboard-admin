@@ -24,6 +24,7 @@ pub struct EventQuery<'a, T: Player<'a>> {
 
 #[derive(Serialize, Deserialize)]
 pub enum EventType {
+    //u32 -> team size
     TeamEvent(u32),
     UserEvent,
 }

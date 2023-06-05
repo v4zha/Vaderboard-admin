@@ -24,7 +24,9 @@ where
 {
     let event_data = event_data.into_inner();
     match event_data.event_type {
-        EventType::TeamEvent => Either::Left(add_team_event(event_data, app_state, db_pool).await),
+        EventType::TeamEvent(_) => {
+            Either::Left(add_team_event(event_data, app_state, db_pool).await)
+        }
         EventType::UserEvent => Either::Right(add_user_event(event_data, app_state, db_pool).await),
     }
 }
@@ -43,20 +45,27 @@ where
         return HttpResponse::BadRequest()
             .body("Another event already Added . Wait till the current Event ends");
     }
-    let event = Into::<Event<Team>>::into(event_info);
-    let event_id = event.id;
-    match event.add_event(&db_pool).await {
-        Ok(_) => {
-            info!("Successfully added team Event [id : {}]", event_id);
-            *event_state = Some(EventWrapper::TeamEvent(EventStateWrapper::New(event)));
-            HttpResponse::Ok().json(web::Json(CommandResponse::new(
-                "Successfully added team event",
-                event_id,
-            )))
+    match Into::<Result<Event<Team>, VaderError>>::into(event_info) {
+        Ok(event) => {
+            let event_id = event.id;
+            match event.add_event(&db_pool).await {
+                Ok(_) => {
+                    info!("Successfully added team Event [id : {}]", event_id);
+                    *event_state = Some(EventWrapper::TeamEvent(EventStateWrapper::New(event)));
+                    HttpResponse::Ok().json(web::Json(CommandResponse::new(
+                        "Successfully added team event",
+                        event_id,
+                    )))
+                }
+                Err(err) => {
+                    error!("Error adding Team event : {}", err.to_string());
+                    HttpResponse::InternalServerError().body(err.to_string())
+                }
+            }
         }
-        Err(err) => {
-            error!("Error adding Team event : {}", err.to_string());
-            HttpResponse::InternalServerError().body(err.to_string())
+        Err(e) => {
+            error!("Error adding Team event : {}", e.to_string());
+            HttpResponse::InternalServerError().body(e.to_string())
         }
     }
 }
@@ -74,16 +83,23 @@ where
         return HttpResponse::BadRequest()
             .body("Another event already Added . Wait till the current Event ends");
     }
-    let event = Into::<Event<User>>::into(event_info);
-    let event_id = event.id;
-    match event.add_event(&db_pool).await {
-        Ok(_) => {
-            info!("Successfully added user Event [id : {}]", event_id);
-            *event_state = Some(EventWrapper::UserEvent(EventStateWrapper::New(event)));
-            HttpResponse::Ok().json(web::Json(CommandResponse::new(
-                "Successfully added user Event",
-                event_id,
-            )))
+    match Into::<Result<Event<User>, VaderError>>::into(event_info) {
+        Ok(event) => {
+            let event_id = event.id;
+            match event.add_event(&db_pool).await {
+                Ok(_) => {
+                    info!("Successfully added user Event [id : {}]", event_id);
+                    *event_state = Some(EventWrapper::UserEvent(EventStateWrapper::New(event)));
+                    HttpResponse::Ok().json(web::Json(CommandResponse::new(
+                        "Successfully added user Event",
+                        event_id,
+                    )))
+                }
+                Err(err) => {
+                    error!("Error adding User event : {}", err.to_string());
+                    HttpResponse::InternalServerError().body(err.to_string())
+                }
+            }
         }
         Err(err) => {
             error!("Error adding User event : {}", err.to_string());
@@ -326,7 +342,7 @@ pub async fn delete_event(
     let info_res: Result<EventInfo, VaderError> = EventInfo::get_event_info(&id, &db_pool).await;
     let res = match info_res {
         Ok(event) => match event.event_type {
-            EventType::TeamEvent => Event::<Team>::delete_event(&id, &db_pool).await,
+            EventType::TeamEvent(_) => Event::<Team>::delete_event(&id, &db_pool).await,
             EventType::UserEvent => Event::<User>::delete_event(&id, &db_pool).await,
         },
         Err(e) => {

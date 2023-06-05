@@ -70,15 +70,23 @@ BEGIN
 END;
 
 -- Check max Team members count trigger  
-CREATE TRIGGER team_members_check BEFORE INSERT ON  team_members FOR EACH ROW
+CREATE TRIGGER team_members_size_check BEFORE INSERT ON  team_members FOR EACH ROW
 WHEN ( SELECT COUNT(*) FROM team_members WHERE team_id=NEW.team_id ) > (
       SELECT team_size FROM events WHERE id=(SELECT event_id FROM event_teams WHERE team_id=NEW.team_id ) ) 
 BEGIN
     SELECT RAISE(ABORT,'Count of team_members exceeds team_size');
 END;
 
+-- Check max Team size on event_teams insertion
+CREATE TRIGGER event_teams_size_check BEFORE INSERT on event_teams FOR EACH ROW
+WHEN ( SELECT COUNT(*) FROM team_members WHERE team_id=NEW.team_id ) > ( 
+  SELECT team_size FROM events where id=NEW.event_id )
+BEGIN
+  SELECT RAISE(ABORT,'Count of team_members exceeds team_size');
+END;
+
 -- create Virtual tables for FTS5 : )
-CREATE VIRTUAL TABLE events_fts USING FTS5(id,name,logo,event_type,content='events');
+CREATE VIRTUAL TABLE events_fts USING FTS5(id,name,logo,event_type,team_size,content='events');
 CREATE VIRTUAL TABLE users_fts USING FTS5(id,name,score,logo,content='users');
 CREATE VIRTUAL TABLE teams_fts USING FTS5(id,name,score,logo,content='teams');
 
@@ -87,7 +95,7 @@ CREATE VIRTUAL TABLE teams_fts USING FTS5(id,name,score,logo,content='teams');
 -- Insertion Trigger
 
 CREATE TRIGGER events_fts_insert AFTER INSERT ON events BEGIN
-   INSERT INTO events_fts(id,name,logo,event_type) VALUES(new.id,new.name,new.logo,new.event_type);
+   INSERT INTO events_fts(id,name,logo,event_type,team_size) VALUES(new.id,new.name,new.logo,new.event_type,new.team_size);
 END;
 
 CREATE TRIGGER users_fts_insert AFTER INSERT ON users BEGIN

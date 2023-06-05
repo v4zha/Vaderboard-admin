@@ -14,6 +14,7 @@ pub enum VaderError<'a> {
     SqlxFieldError(&'a str),
     EventNotFound(&'a str),
     TeamNotFound(&'a str),
+    TeamSizeMismatch(&'a str),
     UserNotFound(&'a str),
     AdminHashError(BcryptError),
     BlockingOpError(BlockingError),
@@ -73,6 +74,8 @@ impl<'a> Display for VaderError<'a> {
             ),
             VaderError::EventNotFound(e) => write!(f, "Event not Found.\n[error] : {}", e),
             VaderError::TeamNotFound(e) => write!(f, "Team not Found.\n[error] : {}", e),
+            VaderError::TeamSizeMismatch(e) => write!(f, "Team Size mismatch.\n[error] : {}", e),
+
             VaderError::UserNotFound(e) => write!(f, "User not Found.\n[error] : {}", e),
             VaderError::AdminHashError(e) => {
                 write!(f, "Admin Hash Error.\n[error] : {}", e.to_string())

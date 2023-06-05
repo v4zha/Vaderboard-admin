@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use super::error_models::VaderError;
 use super::query_models::EventType;
 use super::v_models::{Event, Team, User};
 
@@ -13,14 +14,22 @@ pub struct EventReq<'a> {
     logo: Option<Cow<'a, str>>,
     pub event_type: EventType,
 }
-impl<'a> From<EventReq<'a>> for Event<'a, Team<'a>> {
+
+impl<'a> From<EventReq<'a>> for Result<Event<'a, Team<'a>>, VaderError<'a>> {
     fn from(req: EventReq<'a>) -> Self {
-        Event::<Team>::new(req.name, req.logo)
+        match req.event_type {
+            EventType::TeamEvent(team_size) => {
+                Ok(Event::<Team>::new(req.name, req.logo, Some(team_size)))
+            }
+            EventType::UserEvent => {
+                Err(VaderError::TeamSizeMismatch("time size was not specified"))
+            }
+        }
     }
 }
-impl<'a> From<EventReq<'a>> for Event<'a, User<'a>> {
+impl<'a> From<EventReq<'a>> for Result<Event<'a, User<'a>>, VaderError<'a>> {
     fn from(req: EventReq<'a>) -> Self {
-        Event::<User>::new(req.name, req.logo)
+        Ok(Event::<User>::new(req.name, req.logo, None))
     }
 }
 #[derive(Deserialize)]

@@ -1,8 +1,10 @@
--- Add down migration script here
-DROP TABLE team_users;
-DROP TABLE event_teams;
-DROP TABLE event_users;
 DROP TABLE users;
 DROP TABLE teams;
 DROP TABLE events;
+DROP TABLE team_members;
+DROP TABLE event_teams;
+DROP TABLE event_users;
 DROP TABLE admin_login;
+DROP TABLE events_fts;
+DROP TABLE users_fts;
+DROP TABLE teams_fts;

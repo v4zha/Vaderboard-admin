@@ -91,6 +91,7 @@ where
 
         let name: String = row.get("name");
         let logo: Option<String> = row.get("logo");
+        let team_size: Option<u32> = row.get("team_size");
 
         Ok(Event {
             id,
@@ -98,6 +99,7 @@ where
             logo: logo.map(|s| s.into()),
             player_marker: PhantomData::<&'a T>,
             state_marker: PhantomData::<&'a U>,
+            team_size,
         })
     }
 }
@@ -109,7 +111,7 @@ where
         let event_id = self.id.to_string();
         Box::pin(async move {
             let event = sqlx::query_as::<_, Event<'a, Team, U>>(
-                "SELECT id,name,logo FROM events WHERE id = ?",
+                "SELECT id,name,logo,team_size FROM events WHERE id = ?",
             )
             .bind(&event_id)
             .fetch_one(db_pool)
@@ -118,15 +120,18 @@ where
                 .bind(&event_id)
                 .fetch_all(db_pool)
                 .await?;
-
-            Ok(EventQuery {
-                id: event.id,
-                name: event.name,
-                logo: event.logo,
-                contestants,
-                event_type: EventType::TeamEvent,
-                marker: PhantomData::<&'a Team>,
-            })
+            if let Some(team_size) = self.team_size {
+                Ok(EventQuery {
+                    id: event.id,
+                    name: event.name,
+                    logo: event.logo,
+                    contestants,
+                    event_type: EventType::TeamEvent(team_size),
+                    marker: PhantomData::<&'a Team>,
+                })
+            } else {
+                Err(VaderError::TeamSizeMismatch("No Team size specified"))
+            }
         })
     }
 }
@@ -138,13 +143,13 @@ where
         let event_id = self.id.to_string();
         Box::pin(async move {
             let event = sqlx::query_as::<_, Event<'a, User, U>>(
-                "SELECT id,name,logo FROM events WHERE id = ?",
+                "SELECT id,name,logo,team_size FROM events WHERE id = ?",
             )
             .bind(&event_id)
             .fetch_one(db_pool)
             .await?;
             let contestants = sqlx::query_as::<_, User>(
-                "SELECT u.name AS name,u.score AS score,u.logo AS logo FROM events e JOIN event_users eu on eu.event_id=e.id JOIN users u on eu.user_id=u.id where e.id = ? GROUP BY u.id",
+                "SELECT u.name AS name,u.score AS score,u.logo AS logo FROM events e JOIN event_users eu ON eu.event_id=e.id JOIN users u ON eu.user_id=u.id WHERE e.id = ? GROUP BY u.id",
             )
             .bind(&event_id)
             .fetch_all(db_pool)
@@ -171,8 +176,17 @@ impl<'a, 'b> FromRow<'a, SqliteRow> for EventInfo<'b> {
         let name: String = row.get("name");
         let logo: Option<String> = row.get("logo");
         let type_str: String = row.get("event_type");
+        let team_size: Option<u32> = row.get("team_size");
         let event_type = match type_str.as_str() {
-            "team_event" => EventType::TeamEvent,
+            "team_event" => match team_size {
+                Some(ts) => EventType::TeamEvent(ts),
+                None => {
+                    return Err(sqlx::Error::ColumnDecode {
+                        index: "0".to_string(),
+                        source: Box::new(VaderError::SqlxFieldError("Error decoding EventType")),
+                    });
+                }
+            },
             "user_event" => EventType::UserEvent,
             _ => {
                 return Err(sqlx::Error::ColumnDecode {
@@ -196,7 +210,7 @@ impl EventInfo<'_> {
         let id = event_id.to_string();
         Box::pin(async move {
             let event = sqlx::query_as::<_, EventInfo>(
-                "SELECT id,name,logo,event_type from events WHERE id = ?",
+                "SELECT id,name,logo,event_type,team_size FROM events WHERE id = ?",
             )
             .bind(&id)
             .fetch_one(db_pool)
@@ -206,10 +220,11 @@ impl EventInfo<'_> {
     }
     pub fn get_all_event_info(db_pool: &SqlitePool) -> AsyncDbRes<'_, Vec<Self>> {
         Box::pin(async move {
-            let event =
-                sqlx::query_as::<_, EventInfo>("SELECT id,name,logo,event_type from events")
-                    .fetch_all(db_pool)
-                    .await?;
+            let event = sqlx::query_as::<_, EventInfo>(
+                "SELECT id,name,logo,event_type,team_size FROM events",
+            )
+            .fetch_all(db_pool)
+            .await?;
             Ok(event)
         })
     }
@@ -217,7 +232,7 @@ impl EventInfo<'_> {
 impl TeamInfo<'_> {
     pub fn get_all_team_info(db_pool: &SqlitePool) -> AsyncDbRes<'_, Vec<Self>> {
         Box::pin(async move {
-            let teams = sqlx::query_as::<_, TeamInfo>("SELECT id,name,score,logo from teams")
+            let teams = sqlx::query_as::<_, TeamInfo>("SELECT id,name,score,logo FROM teams")
                 .fetch_all(db_pool)
                 .await?;
             Ok(teams)
@@ -285,7 +300,7 @@ impl Queriable for EventInfo<'_> {
     {
         Box::pin(async move {
             let events = sqlx::query_as::<_, EventInfo>(
-                "SELECT id,name,logo,event_type FROM events_fts WHERE name MATCH  ? ",
+                "SELECT id,name,logo,event_type,team_size FROM events_fts WHERE name MATCH  ? ",
             )
             .bind(format!("{}*", param))
             .fetch_all(db_pool)

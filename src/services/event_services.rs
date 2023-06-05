@@ -129,21 +129,26 @@ impl<'a> VaderEvent<'a> for Event<'a, Team<'a>> {
         })
     }
 
-    fn add_event(&'a self, team_size: u32, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
+    fn add_event(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
         let logo = self.get_logo();
         let id = self.id.to_string();
         let name = &self.name;
         Box::pin(async move {
-            sqlx::query!(
-                "INSERT INTO events (id,name,logo,event_type) VALUES (?,?,?,?)",
-                id,
-                name,
-                logo,
-                "team_event",
-            )
-            .execute(db_pool)
-            .await?;
-            Ok(())
+            if let Some(team_size) = self.team_size {
+                sqlx::query!(
+                    "INSERT INTO events (id,name,logo,event_type,team_size) VALUES (?,?,?,?,?)",
+                    id,
+                    name,
+                    logo,
+                    "team_event",
+                    team_size,
+                )
+                .execute(db_pool)
+                .await?;
+                Ok(())
+            } else {
+                return Err(VaderError::TeamSizeMismatch("Team size not specified"));
+            }
         })
     }
     fn get_logo(&self) -> String {
@@ -308,6 +313,7 @@ where
             logo: e.logo.clone(),
             player_marker: PhantomData::<&'a T>,
             state_marker: PhantomData::<&'a ActiveEvent>,
+            team_size: e.team_size,
         }
     }
 }
@@ -322,6 +328,7 @@ where
             logo: e.logo.clone(),
             player_marker: PhantomData::<&'a T>,
             state_marker: PhantomData::<&'a EndEvent>,
+            team_size: e.team_size,
         }
     }
 }

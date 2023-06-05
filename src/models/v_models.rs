@@ -63,6 +63,7 @@ pub struct Event<'a, T: Player<'a>, U: EventState = NewEvent> {
     pub name: Cow<'a, str>,
     #[serde(default)]
     pub logo: Option<Cow<'a, str>>,
+    pub team_size: Option<u32>,
     pub player_marker: PhantomData<&'a T>,
     pub state_marker: PhantomData<&'a U>,
 }
@@ -110,11 +111,12 @@ pub struct User<'a> {
 }
 
 impl<'a, T: Player<'a>, U: EventState> Event<'a, T, U> {
-    pub fn new(name: Cow<'a, str>, logo: Option<Cow<'a, str>>) -> Self {
+    pub fn new(name: Cow<'a, str>, logo: Option<Cow<'a, str>>, team_size: Option<u32>) -> Self {
         Self {
             id: Uuid::new_v4(),
             name,
             logo,
+            team_size,
             player_marker: PhantomData::<&'a T>,
             state_marker: PhantomData::<&'a U>,
         }
