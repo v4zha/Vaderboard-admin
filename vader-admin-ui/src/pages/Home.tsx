@@ -10,7 +10,8 @@ import EventList from "../components/EventList";
 import { useState } from "react";
 import UserList from "../components/UserList";
 import TeamList from "../components/TeamList";
-import { Drawer, List, ListItem, ListItemText } from "@mui/material";
+import { Button, Drawer, List, ListItem, ListItemText } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 
 enum HomeOpts {
     Event = "Events",
@@ -21,6 +22,7 @@ enum HomeOpts {
 const Home = (): JSX.Element => {
     const [opt, setOpt] = useState<HomeOpts>(HomeOpts.Event);
     const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
+    const navigate = useNavigate();
     const getList = (opt: HomeOpts): JSX.Element => {
         switch (opt) {
             case HomeOpts.Event: {
@@ -58,15 +60,26 @@ const Home = (): JSX.Element => {
                         </Typography>
                     </Toolbar>
                 </AppBar>
+                <Button
+                    onClick={() => {
+                        navigate("/event");
+                    }}
+                >
+                    add Event
+                </Button>
                 <Drawer
                     sx={{
                         width: 240,
                         flexShrink: 0,
+                        "& .MuiDrawer-paper": {
+                            width: 240,
+                            boxSizing: "border-box",
+                            backgroundColor: "primary.main",
+                        },
                     }}
                     variant="persistent"
                     anchor="left"
                     open={drawerOpen}
-                    color="background.default"
                 >
                     <IconButton
                         onClick={() => {
@@ -75,7 +88,11 @@ const Home = (): JSX.Element => {
                     >
                         <ChevronLeftIcon />
                     </IconButton>
-                    <List sx={{ mr: "2rem" }}>
+                    <List
+                        sx={{
+                            mr: "2rem",
+                        }}
+                    >
                         <ListItem
                             onClick={() => {
                                 setOpt(HomeOpts.Event);

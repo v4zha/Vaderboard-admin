@@ -38,7 +38,11 @@ const Login = (): JSX.Element => {
                     </Typography>
                 </div>
                 <div className="login-container">
-                    <Typography variant="h6" color="inherit" component="div">
+                    <Typography
+                        variant="h6"
+                        color="primary.default"
+                        component="div"
+                    >
                         Admin Login
                     </Typography>
                     <form onSubmit={loginSubmit} className="form-container">
@@ -47,6 +51,7 @@ const Login = (): JSX.Element => {
                             id="username"
                             label="Username"
                             type="text"
+                            color="secondary"
                             variant="outlined"
                             fullWidth
                             value={username}
@@ -58,6 +63,7 @@ const Login = (): JSX.Element => {
                             id="password"
                             label="Password"
                             type="password"
+                            color="secondary"
                             variant="outlined"
                             fullWidth
                             value={password}

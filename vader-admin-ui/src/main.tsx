@@ -6,6 +6,8 @@ import CssBaseline from "@mui/material/CssBaseline";
 
 const Login = lazy(() => import("./pages/Login"));
 const Home = lazy(() => import("./pages/Home"));
+const Event = lazy(() => import("./pages/Event"));
+const AddEvent = lazy(() => import("./pages/AddEvent"));
 
 const theme = createTheme({
     palette: {
@@ -31,6 +33,8 @@ const App = (): JSX.Element => {
                     <Routes>
                         <Route path="/" element={<Login />} />
                         <Route path="/home" element={<Home />} />
+                        <Route path="/event" element={<Event />} />
+                        <Route path="/event/add" element={<AddEvent />} />
                     </Routes>
                 </Suspense>
             </Router>

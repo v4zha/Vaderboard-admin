@@ -14,7 +14,6 @@ mod handlers;
 mod models;
 mod services;
 
-use actix_cors::Cors;
 use actix_files::Files;
 
 use crate::handlers::command_handlers::{
@@ -53,8 +52,6 @@ async fn main() -> std::io::Result<()> {
                 CookieSessionStore::default(),
                 session_key.clone(),
             ))
-            //Cors allow all origin Added for testing * : )
-            .wrap(Cors::default().allow_any_origin())
             .app_data(Data::new(app_state.clone()))
             .app_data(Data::new(db_pool.clone()))
             .service(login)

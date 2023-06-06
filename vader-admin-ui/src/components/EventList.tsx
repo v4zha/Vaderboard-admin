@@ -14,6 +14,14 @@ const EventList = (): JSX.Element => {
     const [events, setEvents] = useState<Array<EventInfo>>([]);
     const [socket, setSocket] = useState<WebSocket>();
 
+    const getEventType = (event_type: EventType): string => {
+        if (event_type == "UserEvent") {
+            return "UserEvent";
+        } else {
+            return "TeamEvent";
+        }
+    };
+
     useEffect(() => {
         (async () => {
             const e = await getEvents();
@@ -66,7 +74,9 @@ const EventList = (): JSX.Element => {
                     <ListItem key={event.id}>
                         <ListItemText
                             primary={event.name}
-                            secondary={`${event.event_type} - ${event.id}`}
+                            secondary={`${getEventType(event.event_type)} - ${
+                                event.id
+                            }`}
                         />
                         <IconButton
                             onClick={() => handleClick(event.id)}
