@@ -268,7 +268,7 @@ impl<'a> TeamInfo<'a> {
                 "SELECT id,name,score,logo FROM users_fts u 
                 LEFT JOIN team_members tm ON tm.user_id=u.id 
                 LEFT JOIN event_teams et ON  et.team_id=tm.team_id
-                WHERE tm.event_id = ? 
+                WHERE et.event_id = ? 
                 AND tm.team_id IS NULL
                 AND name MATCH  ? ",
             )
