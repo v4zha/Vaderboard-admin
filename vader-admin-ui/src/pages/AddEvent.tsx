@@ -57,13 +57,11 @@ const AddEvent: React.FC = (): JSX.Element => {
                 event_type: "UserEvent",
             };
         }
-        console.log("Sending data : ", JSON.stringify(data));
         const res = await fetch(url, {
             method: "POST",
             headers,
             body: JSON.stringify(data),
         });
-        console.log(res);
         if (res.ok) {
             navigate("/event");
         }

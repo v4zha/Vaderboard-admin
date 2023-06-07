@@ -7,7 +7,7 @@ use log::debug;
 use sqlx::SqlitePool;
 
 use crate::models::error_models::VaderError;
-use crate::models::query_models::{EventInfo, FtsQuery, IdQuery, TeamInfo, Vboard};
+use crate::models::query_models::{CurFtsBuilder, EventInfo, FtsQuery, IdQuery, TeamInfo, Vboard};
 use crate::models::v_models::{AppState, Team, User};
 
 #[get("/event/info")]
@@ -28,6 +28,93 @@ pub async fn get_current_event(
         }
     }
 }
+#[get("event/info/team")]
+pub async fn get_event_teams(
+    app_state: web::Data<Arc<AppState>>,
+    db_pool: web::Data<SqlitePool>,
+    req: HttpRequest,
+    stream: web::Payload,
+) -> impl Responder {
+    let event_state = app_state.current_event.lock().await;
+    if event_state.is_none() {
+        debug!("Request delined.No event added");
+        Ok(HttpResponse::BadRequest().body("No event added.Add event to Fetch details"))
+    } else {
+        let event = event_state.as_ref().unwrap();
+        match event {
+            crate::models::wrapper_models::EventWrapper::TeamEvent(_) => {
+                let event_id = event.get_id();
+                let cur_fts = CurFtsBuilder::<Team>::new(event_id, db_pool.into_inner())
+                    .team_fts()
+                    .build();
+                ws::start(cur_fts, &req, stream)
+            }
+            crate::models::wrapper_models::EventWrapper::UserEvent(_) => {
+                Ok(HttpResponse::BadRequest().body(
+                    VaderError::EventTypeMismatch("Cannot get Team Info in user event").to_string(),
+                ))
+            }
+        }
+    }
+}
+#[get("event/info/team/rem_members")]
+pub async fn get_event_rem_members(
+    app_state: web::Data<Arc<AppState>>,
+    db_pool: web::Data<SqlitePool>,
+    req: HttpRequest,
+    stream: web::Payload,
+) -> impl Responder {
+    let event_state = app_state.current_event.lock().await;
+    if event_state.is_none() {
+        debug!("Request delined.No event added");
+        Ok(HttpResponse::BadRequest().body("No event added.Add event to Fetch details"))
+    } else {
+        let event = event_state.as_ref().unwrap();
+        match event {
+            crate::models::wrapper_models::EventWrapper::TeamEvent(_) => {
+                let event_id = event.get_id();
+                let cur_fts = CurFtsBuilder::<Team>::new(event_id, db_pool.into_inner())
+                    .rem_user_fts()
+                    .build();
+                ws::start(cur_fts, &req, stream)
+            }
+            crate::models::wrapper_models::EventWrapper::UserEvent(_) => {
+                Ok(HttpResponse::BadRequest().body(
+                    VaderError::EventTypeMismatch("Cannot get Team Info in user event").to_string(),
+                ))
+            }
+        }
+    }
+}
+
+#[get("event/info/user")]
+pub async fn get_event_users(
+    app_state: web::Data<Arc<AppState>>,
+    db_pool: web::Data<SqlitePool>,
+    req: HttpRequest,
+    stream: web::Payload,
+) -> impl Responder {
+    let event_state = app_state.current_event.lock().await;
+    if event_state.is_none() {
+        debug!("Request delined.No event added");
+        Ok(HttpResponse::BadRequest().body("No event added.Add event to Fetch details"))
+    } else {
+        let event = event_state.as_ref().unwrap();
+        match event {
+            crate::models::wrapper_models::EventWrapper::TeamEvent(_) => {
+                Ok(HttpResponse::BadRequest().body(
+                    VaderError::EventTypeMismatch("Cannot get User Info in team event").to_string(),
+                ))
+            }
+            crate::models::wrapper_models::EventWrapper::UserEvent(_) => {
+                let event_id = event.get_id();
+                let cur_fts = CurFtsBuilder::<User>::new(event_id, db_pool.into_inner()).build();
+                ws::start(cur_fts, &req, stream)
+            }
+        }
+    }
+}
+
 #[get("/event/info/id")]
 pub async fn get_event_info(
     id_info: web::Json<IdQuery>,

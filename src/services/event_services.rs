@@ -408,6 +408,23 @@ impl<'a> User<'a> {
             Ok(users)
         })
     }
+    pub fn event_user_fts(
+        event_id: &Uuid,
+        param: &'a str,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a, Vec<Self>> {
+        let event_id = event_id.to_string();
+        Box::pin(async move {
+            let users = sqlx::query_as::<_, User>(
+            "SELECT id,name,score,logo FROM users_fts u JOIN event_users ut ON ut.user_id=u.id WHERE ut.event_id = ? AND name MATCH  ? ",
+            )
+            .bind(&event_id)
+            .bind(format!("{}*", param))
+            .fetch_all(db_pool)
+            .await?;
+            Ok(users)
+        })
+    }
 }
 
 pub trait VbStateMarker {}

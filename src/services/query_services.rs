@@ -9,7 +9,9 @@ use sqlx::{FromRow, Row, SqlitePool};
 use uuid::Uuid;
 
 use crate::models::error_models::VaderError;
-use crate::models::query_models::{EventInfo, EventQuery, EventType, FtsQuery, TeamInfo};
+use crate::models::query_models::{
+    CurEventFts, EventInfo, EventQuery, EventType, FtsQuery, TeamFtsOpt, TeamInfo,
+};
 use crate::models::v_models::{AsyncDbRes, Event, EventState, Player, Team, User};
 impl FromRow<'_, SqliteRow> for Team<'_> {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
@@ -229,13 +231,52 @@ impl EventInfo<'_> {
         })
     }
 }
-impl TeamInfo<'_> {
+impl<'a> TeamInfo<'a> {
     pub fn get_all_team_info(db_pool: &SqlitePool) -> AsyncDbRes<'_, Vec<Self>> {
         Box::pin(async move {
             let teams = sqlx::query_as::<_, TeamInfo>("SELECT id,name,score,logo FROM teams")
                 .fetch_all(db_pool)
                 .await?;
             Ok(teams)
+        })
+    }
+    pub fn event_team_fts(
+        event_id: &Uuid,
+        param: &'a str,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a, Vec<Self>> {
+        let event_id = event_id.to_string();
+        Box::pin(async move {
+            let teams = sqlx::query_as::<_, TeamInfo>(
+            "SELECT id,name,score,logo FROM teams_fts t JOIN event_teams et ON et.team_id=t.id WHERE et.event_id = ? AND name MATCH  ? ",
+            )
+            .bind(&event_id)
+            .bind(format!("{}*", param))
+            .fetch_all(db_pool)
+            .await?;
+            Ok(teams)
+        })
+    }
+    pub fn event_rem_users_fts(
+        event_id: &Uuid,
+        param: &'a str,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a, Vec<User<'a>>> {
+        let event_id = event_id.to_string();
+        Box::pin(async move {
+            let rem_users = sqlx::query_as::<_, User>(
+                "SELECT id,name,score,logo FROM users_fts u 
+                LEFT JOIN team_members tm ON tm.user_id=u.id 
+                LEFT JOIN event_teams et ON  et.team_id=tm.team_id
+                WHERE tm.event_id = ? 
+                AND tm.team_id IS NULL
+                AND name MATCH  ? ",
+            )
+            .bind(&event_id)
+            .bind(format!("{}*", param))
+            .fetch_all(db_pool)
+            .await?;
+            Ok(rem_users)
         })
     }
 }
@@ -449,5 +490,112 @@ where
             }
             _ => (),
         }
+    }
+}
+
+impl<'a> Actor for CurEventFts<'a, TeamInfo<'a>>
+where
+    'a: 'static,
+{
+    type Context = ws::WebsocketContext<Self>;
+}
+impl<'a> StreamHandler<Result<ws::Message, ws::ProtocolError>> for CurEventFts<'a, TeamInfo<'a>>
+where
+    'a: 'static,
+{
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
+        use ws::Message::*;
+        let pool = self.db_pool.clone();
+        let addr = ctx.address();
+        match msg {
+            Ok(Ping(msg)) => ctx.pong(&msg),
+            Ok(Text(param)) => {
+                let id = self.event_id;
+                let team_opt = self.team_opt.clone();
+                async move {
+                    let res = match team_opt {
+                        Some(ref opt) => match opt {
+                            TeamFtsOpt::TeamInfo => TeamInfo::event_team_fts(&id, &param, &pool)
+                                .await
+                                .and_then(|teams| Ok(serde_json::to_string(&teams)?)),
+                            TeamFtsOpt::RemUserInfo => {
+                                TeamInfo::event_rem_users_fts(&id, &param, &pool)
+                                    .await
+                                    .and_then(|users| Ok(serde_json::to_string(&users)?))
+                            }
+                        },
+                        None => unreachable!(),
+                    };
+
+                    match res {
+                        Ok(teams_str) => addr.do_send(FtsQueryRes(teams_str)),
+                        Err(e) => log::debug!("Error Getting Current Event Team Fts : {}", e),
+                    }
+                }
+                .into_actor(self)
+                .wait(ctx);
+            }
+            _ => (),
+        }
+    }
+}
+impl<'a> Handler<FtsQueryRes> for CurEventFts<'a, TeamInfo<'a>>
+where
+    'a: 'static,
+{
+    type Result = ();
+    fn handle(&mut self, msg: FtsQueryRes, ctx: &mut Self::Context) {
+        let res_str = msg.0;
+        ctx.text(res_str);
+    }
+}
+
+impl<'a> Actor for CurEventFts<'a, User<'a>>
+where
+    'a: 'static,
+{
+    type Context = ws::WebsocketContext<Self>;
+}
+impl<'a> StreamHandler<Result<ws::Message, ws::ProtocolError>> for CurEventFts<'a, User<'a>>
+where
+    'a: 'static,
+{
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
+        use ws::Message::*;
+        let pool = self.db_pool.clone();
+        let addr = ctx.address();
+        let id = self.event_id;
+        let team_opt = self.team_opt.clone();
+        match msg {
+            Ok(Ping(msg)) => ctx.pong(&msg),
+            Ok(Text(param)) => {
+                async move {
+                    let res = match team_opt {
+                        None => User::event_user_fts(&id, &param, &pool)
+                            .await
+                            .and_then(|users| Ok(serde_json::to_string(&users)?)),
+                        Some(_) => unreachable!(),
+                    };
+
+                    match res {
+                        Ok(teams_str) => addr.do_send(FtsQueryRes(teams_str)),
+                        Err(e) => log::debug!("Error Getting Current Event User Fts : {}", e),
+                    }
+                }
+                .into_actor(self)
+                .wait(ctx);
+            }
+            _ => (),
+        }
+    }
+}
+impl<'a> Handler<FtsQueryRes> for CurEventFts<'a, User<'a>>
+where
+    'a: 'static,
+{
+    type Result = ();
+    fn handle(&mut self, msg: FtsQueryRes, ctx: &mut Self::Context) {
+        let res_str = msg.0;
+        ctx.text(res_str);
     }
 }

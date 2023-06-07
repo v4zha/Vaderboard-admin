@@ -290,7 +290,7 @@ pub async fn add_user(
     }
 }
 
-#[post("/event/team/add_members")]
+#[post("/event/team/add/members")]
 pub async fn add_team_members(
     m_info: web::Json<MemberInfo>,
     app_state: web::Data<Arc<AppState>>,

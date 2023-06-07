@@ -22,7 +22,8 @@ use crate::handlers::command_handlers::{
 };
 use crate::handlers::query_handlers::{
     event_fts, get_all_event, get_all_team, get_all_user, get_current_event, get_event_info,
-    get_team_info, get_user_info, team_fts, user_fts, vaderboard,
+    get_event_rem_members, get_event_teams, get_event_users, get_team_info, get_user_info,
+    team_fts, user_fts, vaderboard,
 };
 use crate::models::v_models::AppState;
 use crate::services::v_middlewares::AdminOnlyGuard;
@@ -71,6 +72,9 @@ async fn main() -> std::io::Result<()> {
                     .service(end_event),
             )
             .service(get_current_event)
+            .service(get_event_teams)
+            .service(get_event_rem_members)
+            .service(get_event_users)
             .service(get_all_event)
             .service(get_event_info)
             .service(get_all_team)

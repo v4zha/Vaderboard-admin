@@ -220,6 +220,7 @@ impl<'a> EventWrapper<'a> {
             },
         }
     }
+
     pub fn get_vboard(
         &'a self,
         db_pool: &'a SqlitePool,
