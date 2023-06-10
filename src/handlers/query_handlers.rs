@@ -9,7 +9,7 @@ use sqlx::SqlitePool;
 
 use crate::models::error_models::VaderError;
 use crate::models::query_models::{
-    CurFtsBuilder, EventInfo, FtsQuery, IdQuery, TeamInfo, VboardClient, VboardSrv,
+    CurFtsBuilder, CurFtsServer, EventInfo, FtsQuery, IdQuery, TeamInfo, VboardClient, VboardSrv,
 };
 use crate::models::v_models::{AppState, Team, User};
 
@@ -34,6 +34,7 @@ pub async fn get_current_event(
 #[get("event/info/team/{count}")]
 pub async fn get_event_teams(
     app_state: web::Data<Arc<AppState>>,
+    srv_addr: web::Data<Addr<CurFtsServer<'static>>>,
     db_pool: web::Data<SqlitePool>,
     count: web::Path<u32>,
     req: HttpRequest,
@@ -48,10 +49,14 @@ pub async fn get_event_teams(
         match event {
             crate::models::wrapper_models::EventWrapper::TeamEvent(_) => {
                 let event_id = event.get_id();
-                let cur_fts =
-                    CurFtsBuilder::<Team>::new(event_id, count.into_inner(), db_pool.into_inner())
-                        .team_fts()
-                        .build();
+                let cur_fts = CurFtsBuilder::<Team>::new(
+                    event_id,
+                    srv_addr.into_inner(),
+                    count.into_inner(),
+                    db_pool.into_inner(),
+                )
+                .team_fts()
+                .build();
                 ws::start(cur_fts, &req, stream)
             }
             crate::models::wrapper_models::EventWrapper::UserEvent(_) => {
@@ -65,6 +70,7 @@ pub async fn get_event_teams(
 #[get("event/info/team/rem_members/{count}")]
 pub async fn get_event_rem_members(
     app_state: web::Data<Arc<AppState>>,
+    srv_addr: web::Data<Addr<CurFtsServer<'static>>>,
     db_pool: web::Data<SqlitePool>,
     count: web::Path<u32>,
     req: HttpRequest,
@@ -79,10 +85,14 @@ pub async fn get_event_rem_members(
         match event {
             crate::models::wrapper_models::EventWrapper::TeamEvent(_) => {
                 let event_id = event.get_id();
-                let cur_fts =
-                    CurFtsBuilder::<Team>::new(event_id, count.into_inner(), db_pool.into_inner())
-                        .rem_user_fts()
-                        .build();
+                let cur_fts = CurFtsBuilder::<Team>::new(
+                    event_id,
+                    srv_addr.into_inner(),
+                    count.into_inner(),
+                    db_pool.into_inner(),
+                )
+                .rem_user_fts()
+                .build();
                 ws::start(cur_fts, &req, stream)
             }
             crate::models::wrapper_models::EventWrapper::UserEvent(_) => {
@@ -97,6 +107,7 @@ pub async fn get_event_rem_members(
 #[get("event/info/user/{count}")]
 pub async fn get_event_users(
     app_state: web::Data<Arc<AppState>>,
+    srv_addr: web::Data<Addr<CurFtsServer<'static>>>,
     db_pool: web::Data<SqlitePool>,
     count: web::Path<u32>,
     req: HttpRequest,
@@ -116,9 +127,13 @@ pub async fn get_event_users(
             }
             crate::models::wrapper_models::EventWrapper::UserEvent(_) => {
                 let event_id = event.get_id();
-                let cur_fts =
-                    CurFtsBuilder::<User>::new(event_id, count.into_inner(), db_pool.into_inner())
-                        .build();
+                let cur_fts = CurFtsBuilder::<User>::new(
+                    event_id,
+                    srv_addr.into_inner(),
+                    count.into_inner(),
+                    db_pool.into_inner(),
+                )
+                .build();
                 ws::start(cur_fts, &req, stream)
             }
         }

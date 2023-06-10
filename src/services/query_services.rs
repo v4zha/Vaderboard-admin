@@ -1,7 +1,8 @@
 use std::marker::PhantomData;
 
 use actix::{
-    Actor, AsyncContext, ContextFutureSpawner, Handler, Message, StreamHandler, WrapFuture,
+    Actor, ActorContext, AsyncContext, ContextFutureSpawner, Handler, Message, StreamHandler,
+    WrapFuture,
 };
 use actix_web_actors::ws;
 use sqlx::sqlite::SqliteRow;
@@ -10,7 +11,8 @@ use uuid::Uuid;
 
 use crate::models::error_models::VaderError;
 use crate::models::query_models::{
-    CurEventFts, EventInfo, EventQuery, EventType, FtsQuery, TeamFtsOpt, TeamInfo,
+    CurEventFts, CurEventFtsWrapper, CurFtsConnect, CurFtsDisconnect, CurFtsServer, CurFtsStop,
+    EventInfo, EventQuery, EventType, FtsQuery, TeamFtsOpt, TeamInfo,
 };
 use crate::models::v_models::{AsyncDbRes, Event, EventState, Player, Team, User};
 impl FromRow<'_, SqliteRow> for Team<'_> {
@@ -592,6 +594,21 @@ where
     'a: 'static,
 {
     type Context = ws::WebsocketContext<Self>;
+    fn started(&mut self, ctx: &mut Self::Context) {
+        let addr = ctx.address();
+        self.addr = Some(addr.clone());
+        self.srv_addr
+            .do_send(CurFtsConnect(CurEventFtsWrapper(actix_web::Either::Left(
+                addr,
+            ))))
+    }
+    fn stopped(&mut self, _ctx: &mut Self::Context) {
+        if let Some(addr) = &self.addr {
+            self.srv_addr.do_send(CurFtsDisconnect(CurEventFtsWrapper(
+                actix_web::Either::Left(addr.clone()),
+            )))
+        }
+    }
 }
 impl<'a> StreamHandler<Result<ws::Message, ws::ProtocolError>> for CurEventFts<'a, TeamInfo<'a>>
 where
@@ -652,6 +669,21 @@ where
     'a: 'static,
 {
     type Context = ws::WebsocketContext<Self>;
+    fn started(&mut self, ctx: &mut Self::Context) {
+        let addr = ctx.address();
+        self.addr = Some(addr.clone());
+        self.srv_addr
+            .do_send(CurFtsConnect(CurEventFtsWrapper(actix_web::Either::Right(
+                addr,
+            ))))
+    }
+    fn stopped(&mut self, _ctx: &mut Self::Context) {
+        if let Some(addr) = &self.addr {
+            self.srv_addr.do_send(CurFtsDisconnect(CurEventFtsWrapper(
+                actix_web::Either::Right(addr.clone()),
+            )))
+        }
+    }
 }
 impl<'a> StreamHandler<Result<ws::Message, ws::ProtocolError>> for CurEventFts<'a, User<'a>>
 where
@@ -695,5 +727,58 @@ where
     fn handle(&mut self, msg: FtsQueryRes, ctx: &mut Self::Context) {
         let res_str = msg.0;
         ctx.text(res_str);
+    }
+}
+
+impl Handler<CurFtsStop> for CurFtsServer<'_> {
+    type Result = ();
+    fn handle(&mut self, _msg: CurFtsStop, _ctx: &mut Self::Context) -> Self::Result {
+        self.cfts_addr
+            .iter()
+            .for_each(|cfts_wrapper| match &cfts_wrapper.0 {
+                actix_web::Either::Left(addr) => addr.do_send(CurFtsStop),
+                actix_web::Either::Right(addr) => addr.do_send(CurFtsStop),
+            });
+    }
+}
+
+impl Handler<CurFtsConnect<'_>> for CurFtsServer<'_> {
+    type Result = ();
+    fn handle(&mut self, msg: CurFtsConnect, _ctx: &mut Self::Context) -> Self::Result {
+        self.cfts_addr.insert(msg.0);
+    }
+}
+
+impl Handler<CurFtsDisconnect<'_>> for CurFtsServer<'_> {
+    type Result = ();
+    fn handle(&mut self, msg: CurFtsDisconnect, _ctx: &mut Self::Context) -> Self::Result {
+        self.cfts_addr.remove(&msg.0);
+    }
+}
+
+impl<'a> Handler<CurFtsStop> for CurEventFts<'a, TeamInfo<'a>>
+where
+    'a: 'static,
+{
+    type Result = ();
+    fn handle(&mut self, _msg: CurFtsStop, ctx: &mut Self::Context) -> Self::Result {
+        ctx.close(Some(ws::CloseReason {
+            code: ws::CloseCode::Normal,
+            description: Some("The Current Event ended".to_string()),
+        }));
+        ctx.stop();
+    }
+}
+impl<'a> Handler<CurFtsStop> for CurEventFts<'a, User<'a>>
+where
+    'a: 'static,
+{
+    type Result = ();
+    fn handle(&mut self, _msg: CurFtsStop, ctx: &mut Self::Context) -> Self::Result {
+        ctx.close(Some(ws::CloseReason {
+            code: ws::CloseCode::Normal,
+            description: Some("The Current Event ended".to_string()),
+        }));
+        ctx.stop();
     }
 }

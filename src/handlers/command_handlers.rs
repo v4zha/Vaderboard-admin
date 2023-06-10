@@ -10,7 +10,9 @@ use crate::models::command_models::{
     CommandResponse, ContestantInfo, EventReq, MemberInfo, ScoreResponse, ScoreUpdate,
 };
 use crate::models::error_models::VaderError;
-use crate::models::query_models::{EventInfo, EventType, IdQuery, VboardRes, VboardSrv};
+use crate::models::query_models::{
+    CurFtsServer, CurFtsStop, EventInfo, EventType, IdQuery, VboardRes, VboardSrv,
+};
 use crate::models::v_models::{AdminInfo, AppState, Event, Team, User, VaderEvent};
 use crate::models::wrapper_models::{EventStateWrapper, EventWrapper};
 
@@ -148,7 +150,10 @@ pub async fn start_event(
     }
 }
 #[post("/event/stop")]
-pub async fn end_event(app_state: web::Data<Arc<AppState>>) -> impl Responder {
+pub async fn end_event(
+    app_state: web::Data<Arc<AppState>>,
+    srv_addr: web::Data<Addr<CurFtsServer<'static>>>,
+) -> impl Responder {
     let mut event_state = app_state.current_event.lock().await;
     if event_state.is_none() {
         error!("Request delined.No event added");
@@ -163,6 +168,7 @@ pub async fn end_event(app_state: web::Data<Arc<AppState>>) -> impl Responder {
                 );
                 info!("{}", body);
                 *event_state = None;
+                srv_addr.do_send(CurFtsStop);
                 HttpResponse::Ok().body(body)
             }
             Err(e) => HttpResponse::BadRequest().body(e.to_string()),
@@ -290,7 +296,7 @@ pub async fn add_user(
             }
             Err(err) => {
                 error!("Error adding User :\n[error] : {}", err);
-                HttpResponse::BadRequest().body("Error adding User")
+                HttpResponse::BadRequest().body(err.to_string())
             }
         }
     }

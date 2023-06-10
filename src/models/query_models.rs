@@ -1,10 +1,11 @@
+use core::hash::Hash;
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
 use actix::{Actor, Addr, AsyncContext, Message};
-use actix_web::web;
+use actix_web::{web, Either};
 use actix_web_actors::ws;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
@@ -68,6 +69,47 @@ where
         }
     }
 }
+
+pub type EitherCurEvents<'a> =
+    Either<Addr<CurEventFts<'a, TeamInfo<'a>>>, Addr<CurEventFts<'a, User<'a>>>>;
+
+#[derive(Eq, PartialEq)]
+pub struct CurEventFtsWrapper<'a: 'static>(pub EitherCurEvents<'a>);
+
+impl Hash for CurEventFtsWrapper<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match &self.0 {
+            actix_web::Either::Left(addr) => addr.hash(state),
+            Either::Right(addr) => addr.hash(state),
+        }
+    }
+}
+
+pub struct CurFtsServer<'a: 'static> {
+    pub cfts_addr: HashSet<CurEventFtsWrapper<'a>>,
+}
+impl CurFtsServer<'_> {
+    pub fn new() -> Self {
+        CurFtsServer {
+            cfts_addr: HashSet::new(),
+        }
+    }
+}
+impl Actor for CurFtsServer<'_> {
+    type Context = actix::Context<Self>;
+}
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct CurFtsStop;
+
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct CurFtsDisconnect<'a: 'static>(pub CurEventFtsWrapper<'a>);
+
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct CurFtsConnect<'a: 'static>(pub CurEventFtsWrapper<'a>);
+
 #[derive(Clone, Copy)]
 pub enum TeamFtsOpt {
     TeamInfo,
@@ -75,6 +117,7 @@ pub enum TeamFtsOpt {
 }
 pub struct CurFtsBuilder<'a, P: Player<'a>> {
     event_id: Uuid,
+    srv_addr: Arc<Addr<CurFtsServer<'static>>>,
     db_pool: Arc<SqlitePool>,
     type_marker: PhantomData<&'a P>,
     count: u32,
@@ -82,30 +125,59 @@ pub struct CurFtsBuilder<'a, P: Player<'a>> {
 
 pub struct CurFtsTeamBuilder {
     event_id: Uuid,
+    srv_addr: Arc<Addr<CurFtsServer<'static>>>,
     db_pool: Arc<SqlitePool>,
     team_opt: TeamFtsOpt,
     count: u32,
+}
+
+pub trait CurEventFtsMarker: Queriable {}
+impl CurEventFtsMarker for TeamInfo<'_> {}
+impl CurEventFtsMarker for User<'_> {}
+
+pub struct CurEventFts<'a, T: CurEventFtsMarker>
+where
+    CurEventFts<'a, T>: Actor,
+{
+    pub event_id: Uuid,
+    pub addr: Option<Addr<Self>>,
+    pub srv_addr: Arc<Addr<CurFtsServer<'static>>>,
+    pub db_pool: Arc<SqlitePool>,
+    pub count: u32,
+    pub team_opt: Option<TeamFtsOpt>,
+    type_marker: PhantomData<&'a T>,
 }
 
 impl<'a, P> CurFtsBuilder<'a, P>
 where
     P: Player<'a>,
 {
-    pub fn new(event_id: Uuid, count: u32, db_pool: Arc<SqlitePool>) -> Self {
+    pub fn new(
+        event_id: Uuid,
+        srv_addr: Arc<Addr<CurFtsServer>>,
+        count: u32,
+        db_pool: Arc<SqlitePool>,
+    ) -> Self {
         CurFtsBuilder {
             event_id,
             db_pool,
+            srv_addr,
             count,
             type_marker: PhantomData::<&'a P>,
         }
     }
 }
 
-impl<'a> CurFtsBuilder<'a, User<'a>> {
+impl<'a> CurFtsBuilder<'a, User<'a>>
+where
+    'a: 'static,
+{
     pub fn build(self) -> CurEventFts<'a, User<'a>> {
         CurEventFts {
+            addr: None,
             event_id: self.event_id,
             db_pool: self.db_pool,
+            srv_addr: self.srv_addr,
             team_opt: None,
             count: self.count,
             type_marker: PhantomData::<&'a User>,
@@ -116,6 +188,7 @@ impl<'a> CurFtsBuilder<'a, Team<'a>> {
     pub fn team_fts(self) -> CurFtsTeamBuilder {
         CurFtsTeamBuilder {
             event_id: self.event_id,
+            srv_addr: self.srv_addr,
             db_pool: self.db_pool,
             count: self.count,
             team_opt: TeamFtsOpt::TeamInfo,
@@ -124,30 +197,28 @@ impl<'a> CurFtsBuilder<'a, Team<'a>> {
     pub fn rem_user_fts(self) -> CurFtsTeamBuilder {
         CurFtsTeamBuilder {
             event_id: self.event_id,
+            srv_addr: self.srv_addr,
             db_pool: self.db_pool,
             count: self.count,
             team_opt: TeamFtsOpt::RemUserInfo,
         }
     }
 }
-impl<'a> CurFtsTeamBuilder {
+impl<'a> CurFtsTeamBuilder
+where
+    'a: 'static,
+{
     pub fn build(self) -> CurEventFts<'a, TeamInfo<'a>> {
         CurEventFts {
+            addr: None,
             event_id: self.event_id,
             db_pool: self.db_pool,
+            srv_addr: self.srv_addr,
             count: self.count,
             team_opt: Some(self.team_opt),
             type_marker: PhantomData::<&'a TeamInfo>,
         }
     }
-}
-
-pub struct CurEventFts<'a, T: Queriable> {
-    pub event_id: Uuid,
-    pub db_pool: Arc<SqlitePool>,
-    pub count: u32,
-    pub team_opt: Option<TeamFtsOpt>,
-    type_marker: PhantomData<&'a T>,
 }
 
 #[derive(Message)]
@@ -163,13 +234,13 @@ pub struct VbDisconnect(pub Addr<VboardClient>);
 pub struct VbConnect(pub Addr<VboardClient>);
 
 pub struct VboardClient {
-    pub srv_addr: web::Data<Addr<VboardSrv>>,
+    pub srv_addr: Arc<Addr<VboardSrv>>,
     pub addr: Option<Addr<Self>>,
 }
 impl VboardClient {
     pub fn new(srv_addr: web::Data<Addr<VboardSrv>>) -> Self {
         Self {
-            srv_addr,
+            srv_addr: srv_addr.into_inner(),
             addr: None,
         }
     }
