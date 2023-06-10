@@ -103,7 +103,7 @@ impl<'a> EventWrapper<'a> {
             Self::TeamEvent(sw) => match sw {
                 EventStateWrapper::New(e) => e.reset_score(db_pool),
                 _ => Box::pin(async move {
-                    Err(VaderError::EventTypeMismatch(
+                    Err(VaderError::EventActive(
                         "Unable to reset score , Event may have already started / ended.",
                     ))
                 }),
@@ -229,12 +229,12 @@ impl<'a> EventWrapper<'a> {
         match self {
             Self::TeamEvent(sw) => match sw {
                 EventStateWrapper::Active(e) => Box::pin(async move {
-                    let res = e.get_vboard(db_pool, count).await?;
+                    let res = e.get_vboard(count, db_pool).await?;
                     let team_str = serde_json::to_string(&res)?;
                     Ok(team_str.into())
                 }),
                 EventStateWrapper::End(e) => Box::pin(async move {
-                    let res = e.get_vboard(db_pool, count).await?;
+                    let res = e.get_vboard(count, db_pool).await?;
                     let team_str = serde_json::to_string(&res)?;
                     Ok(team_str.into())
                 }),
@@ -246,12 +246,12 @@ impl<'a> EventWrapper<'a> {
             },
             Self::UserEvent(sw) => match sw {
                 EventStateWrapper::Active(e) => Box::pin(async move {
-                    let res = e.get_vboard(db_pool, count).await?;
+                    let res = e.get_vboard(count, db_pool).await?;
                     let users_str = serde_json::to_string(&res)?;
                     Ok(users_str.into())
                 }),
                 EventStateWrapper::End(e) => Box::pin(async move {
-                    let res = e.get_vboard(db_pool, count).await?;
+                    let res = e.get_vboard(count, db_pool).await?;
                     let users_str = serde_json::to_string(&res)?;
                     Ok(users_str.into())
                 }),

@@ -1,6 +1,7 @@
 use std::env;
 use std::sync::Arc;
 
+use actix::Actor;
 use actix_session::storage::CookieSessionStore;
 use actix_session::SessionMiddleware;
 use actix_web::cookie::Key;
@@ -25,6 +26,7 @@ use crate::handlers::query_handlers::{
     get_event_rem_members, get_event_teams, get_event_users, get_team_info, get_user_info,
     team_fts, user_fts, vaderboard,
 };
+use crate::models::query_models::VboardSrv;
 use crate::models::v_models::AppState;
 use crate::services::v_middlewares::AdminOnlyGuard;
 
@@ -38,14 +40,21 @@ async fn main() -> std::io::Result<()> {
     let host = env::var("HOST").unwrap_or("127.0.0.1".to_string());
     let port = env::var("PORT").unwrap_or("8080".to_string());
     let db_url = env::var("DATABASE_URL").expect("Error Reading DATABASE_URL Env Variable");
+    let vb_count: u32 = env::var("VADERBOARD_COUNT").map_or(10, |count| {
+        count
+            .parse::<u32>()
+            .expect("Unable to parse VADERBOARD_COUNT,please replace with a positive integer")
+    });
     let session_key = Key::generate();
     let host_port = format!("{}:{}", host, port);
     let db_pool = SqlitePool::connect(&db_url)
         .await
         .expect("Error connecting to Database");
-    let app_state = Arc::new(AppState::new());
+    let app_state = Arc::new(AppState::new(vb_count));
+    //VaderBoard server Actor
+    let vb_srv = VboardSrv::new().start();
     log::info!("Database connection successful");
-    log::info!("Server running at {}", host_port);
+    log::info!("Server Starting on :  {}", host_port);
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
@@ -54,6 +63,7 @@ async fn main() -> std::io::Result<()> {
                 session_key.clone(),
             ))
             .app_data(Data::new(app_state.clone()))
+            .app_data(Data::new(vb_srv.clone()))
             .app_data(Data::new(db_pool.clone()))
             .service(login)
             .service(

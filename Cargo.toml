@@ -7,7 +7,7 @@ build = "build.rs"
 
 [dependencies]
 actix-web = "4.3.1"
-sqlx = { version = "0.6.3", features = ["sqlite", "runtime-actix-native-tls"] }
+sqlx = { version = "0.6.3", features = ["sqlite", "runtime-actix-native-tls","chrono"] }
 serde = { version = "1.0.163", features = ['derive'] }
 serde_json = "1.0.96"
 log = "0.4.17"
@@ -23,12 +23,10 @@ bcrypt = "0.14.0"
 actix-web-actors = "4.2.0"
 actix = "0.13.0"
 actix-cors = "0.6.4"
+chrono = "0.4.26"
 
 [build-dependencies]
 sqlx = { version = "0.6.3", features = ["sqlite", "runtime-actix-native-tls"] }
 tokio = { version = "1.28.1", features = ["full"] }
 dotenvy = "0.15.7"
 bcrypt = "0.14.0"
-
-[profile.dev.package.sqlx-macros]
-opt-level = 3

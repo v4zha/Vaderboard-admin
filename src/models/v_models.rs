@@ -3,7 +3,6 @@ use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
 
-use actix::Addr;
 use bcrypt::verify;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
@@ -11,20 +10,19 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use super::error_models::VaderError;
-use super::query_models::Vboard;
 use super::wrapper_models::EventWrapper;
 
 pub type AsyncDbRes<'a, T> = Pin<Box<dyn Future<Output = Result<T, VaderError<'a>>> + Send + 'a>>;
 
 pub struct AppState {
     pub current_event: Mutex<Option<EventWrapper<'static>>>,
-    pub vb_addr: Mutex<Vec<Addr<Vboard>>>,
+    pub vb_count: u32,
 }
 impl AppState {
-    pub fn new() -> Self {
+    pub fn new(vb_count: u32) -> Self {
         AppState {
             current_event: Mutex::new(None),
-            vb_addr: Mutex::new(Vec::new()),
+            vb_count,
         }
     }
 }

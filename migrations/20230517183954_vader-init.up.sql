@@ -3,29 +3,38 @@ CREATE TABLE events (
     name TEXT UNIQUE,
     logo TEXT ,
     event_type TEXT,
-  team_size INTEGER DEFAULT NULL
+    team_size INTEGER DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT TIMESTAMP NOT NULL
 );
+
+-- index event timestamp to get recently added events
+CREATE INDEX idx_events_timestamp ON events (created_at);
 
 CREATE TABLE teams (
     id UUID PRIMARY KEY,
     name TEXT UNIQUE,
     score INTEGER,
-    logo TEXT
+    logo TEXT,
+    created_at TIMESTAMP DEFAULT TIMESTAMP NOT NULL
 );
 
 -- index for fast score reads 
+-- index team and user timestamp to get recently added teams/users
 -- for vaderboard websocket endpoint : )
 
 CREATE INDEX idx_teams_score ON teams (score);
+CREATE INDEX idx_teams_timestamp ON teams (created_at);
 
 CREATE TABLE users (
     id UUID PRIMARY KEY,
     name TEXT UNIQUE,
     score INTEGER,
-    logo TEXT
+    logo TEXT,
+    created_at TIMESTAMP DEFAULT TIMESTAMP NOT NULL
 );
 
 CREATE INDEX idx_users_score ON users (score);
+CREATE INDEX idx_users_timestamp ON users (created_at);
 
 CREATE TABLE event_teams (
     event_id UUID,

@@ -10,7 +10,11 @@ import FileCopyIcon from "@mui/icons-material/FileCopy";
 import { useEffect, useState } from "react";
 import { getEvents } from "../utils/apiUtils";
 
-const EventList = (): JSX.Element => {
+interface EventListProps {
+    url: string;
+}
+
+const EventList = ({ url: string }: EventListProps): JSX.Element => {
     const [events, setEvents] = useState<Array<EventInfo>>([]);
     const [socket, setSocket] = useState<WebSocket>();
 

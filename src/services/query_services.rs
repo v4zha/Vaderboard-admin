@@ -113,12 +113,17 @@ where
         let event_id = self.id.to_string();
         Box::pin(async move {
             let event = sqlx::query_as::<_, Event<'a, Team, U>>(
-                "SELECT id,name,logo,team_size FROM events WHERE id = ?",
+                "SELECT id,name,logo,team_size FROM events WHERE id = ? ORDER BY created_at DESC",
             )
             .bind(&event_id)
             .fetch_one(db_pool)
             .await?;
-            let contestants = sqlx::query_as::<_, Team>("SELECT t.id AS id,t.name AS name,t.score AS score,t.logo AS logo,GROUP_CONCAT(tm.user_id,',') AS team_members FROM events e JOIN event_teams et ON et.event_id = e.id JOIN teams t ON et.team_id=t.id JOIN team_members tm ON tm.team_id = t.id WHERE e.id = ? GROUP BY t.id")
+            let contestants = sqlx::query_as::<_, Team>("SELECT t.id AS id,t.name AS name,t.score AS score,t.logo AS logo,
+                                                        GROUP_CONCAT(tm.user_id,',') AS team_members 
+                                                        FROM events e JOIN event_teams et ON et.event_id = e.id 
+                                                        JOIN teams t ON et.team_id=t.id 
+                                                        JOIN team_members tm ON tm.team_id = t.id 
+                                                        WHERE e.id = ? GROUP BY t.id")
                 .bind(&event_id)
                 .fetch_all(db_pool)
                 .await?;
@@ -145,13 +150,16 @@ where
         let event_id = self.id.to_string();
         Box::pin(async move {
             let event = sqlx::query_as::<_, Event<'a, User, U>>(
-                "SELECT id,name,logo,team_size FROM events WHERE id = ?",
+                "SELECT id,name,logo,team_size FROM events WHERE id = ? ORDER BY created_at DESC",
             )
             .bind(&event_id)
             .fetch_one(db_pool)
             .await?;
             let contestants = sqlx::query_as::<_, User>(
-                "SELECT u.name AS name,u.score AS score,u.logo AS logo FROM events e JOIN event_users eu ON eu.event_id=e.id JOIN users u ON eu.user_id=u.id WHERE e.id = ? GROUP BY u.id",
+                "SELECT u.id AS id,u.name AS name,u.score AS score,u.logo AS logo 
+                FROM events e JOIN event_users eu ON eu.event_id=e.id 
+                JOIN users u ON eu.user_id=u.id 
+                WHERE e.id = ? GROUP BY u.id",
             )
             .bind(&event_id)
             .fetch_all(db_pool)
@@ -223,7 +231,7 @@ impl EventInfo<'_> {
     pub fn get_all_event_info(db_pool: &SqlitePool) -> AsyncDbRes<'_, Vec<Self>> {
         Box::pin(async move {
             let event = sqlx::query_as::<_, EventInfo>(
-                "SELECT id,name,logo,event_type,team_size FROM events",
+                "SELECT id,name,logo,event_type,team_size FROM events ORDER BY created_at DESC",
             )
             .fetch_all(db_pool)
             .await?;
@@ -234,48 +242,90 @@ impl EventInfo<'_> {
 impl<'a> TeamInfo<'a> {
     pub fn get_all_team_info(db_pool: &SqlitePool) -> AsyncDbRes<'_, Vec<Self>> {
         Box::pin(async move {
-            let teams = sqlx::query_as::<_, TeamInfo>("SELECT id,name,score,logo FROM teams")
-                .fetch_all(db_pool)
-                .await?;
+            let teams = sqlx::query_as::<_, TeamInfo>(
+                "SELECT id,name,score,logo FROM teams ORDER BY created_at DESC",
+            )
+            .fetch_all(db_pool)
+            .await?;
             Ok(teams)
         })
     }
     pub fn event_team_fts(
         event_id: &Uuid,
         param: &'a str,
+        count: u32,
         db_pool: &'a SqlitePool,
     ) -> AsyncDbRes<'a, Vec<Self>> {
         let event_id = event_id.to_string();
         Box::pin(async move {
-            let teams = sqlx::query_as::<_, TeamInfo>(
-            "SELECT id,name,score,logo FROM teams_fts t JOIN event_teams et ON et.team_id=t.id WHERE et.event_id = ? AND name MATCH  ? ",
-            )
-            .bind(&event_id)
-            .bind(format!("{}*", param))
-            .fetch_all(db_pool)
-            .await?;
+            let teams = if param.is_empty() {
+                sqlx::query_as::<_, TeamInfo>(
+                    "SELECT id,name,score,logo FROM teams t 
+                     JOIN event_teams et ON et.team_id=t.id 
+                     WHERE et.event_id = ?
+                     ORDER by t.created_at DESC 
+                     LIMIT ?
+                    ",
+                )
+                .bind(&event_id)
+                .bind(count)
+                .fetch_all(db_pool)
+                .await?
+            } else {
+                sqlx::query_as::<_, TeamInfo>(
+                    "SELECT id,name,score,logo FROM teams_fts t 
+                    JOIN event_teams et ON et.team_id=t.id 
+                    WHERE et.event_id = ? AND name MATCH  ? || '*'
+                    LIMIT ?",
+                )
+                .bind(&event_id)
+                .bind(param)
+                .bind(count)
+                .fetch_all(db_pool)
+                .await?
+            };
             Ok(teams)
         })
     }
     pub fn event_rem_users_fts(
         event_id: &Uuid,
         param: &'a str,
+        count: u32,
         db_pool: &'a SqlitePool,
     ) -> AsyncDbRes<'a, Vec<User<'a>>> {
         let event_id = event_id.to_string();
         Box::pin(async move {
-            let rem_users = sqlx::query_as::<_, User>(
-                "SELECT id,name,score,logo FROM users_fts u 
-                LEFT JOIN team_members tm ON tm.user_id=u.id 
-                LEFT JOIN event_teams et ON  et.team_id=tm.team_id
-                WHERE et.event_id = ? 
-                AND tm.team_id IS NULL
-                AND name MATCH  ? ",
-            )
-            .bind(&event_id)
-            .bind(format!("{}*", param))
-            .fetch_all(db_pool)
-            .await?;
+            let rem_users = if param.is_empty() {
+                sqlx::query_as::<_, User>(
+                    "SELECT id,name,score,logo FROM users u 
+                    LEFT JOIN team_members tm ON tm.user_id=u.id 
+                    LEFT JOIN event_teams et ON  et.team_id=tm.team_id
+                    WHERE et.event_id = ? 
+                    AND tm.team_id IS NULL
+                    ORDER by u.created_at DESC 
+                    LIMIT ?",
+                )
+                .bind(&event_id)
+                .bind(count)
+                .fetch_all(db_pool)
+                .await?
+            } else {
+                sqlx::query_as::<_, User>(
+                    "SELECT id,name,score,logo FROM users_fts u 
+                    LEFT JOIN team_members tm ON tm.user_id=u.id 
+                    LEFT JOIN event_teams et ON  et.team_id=tm.team_id
+                    WHERE et.event_id = ? 
+                    AND tm.team_id IS NULL
+                    AND name MATCH  ? || '*'
+                    LIMIT ?",
+                )
+                .bind(&event_id)
+                .bind(param)
+                .bind(count)
+                .fetch_all(db_pool)
+                .await?
+            };
+
             Ok(rem_users)
         })
     }
@@ -285,6 +335,7 @@ pub trait Queriable {
     type QueryRes;
     fn fts_query<'a, 'b>(
         param: &'a str,
+        count: u32,
         db_pool: &'b SqlitePool,
     ) -> AsyncDbRes<'a, Vec<Self::QueryRes>>
     where
@@ -294,18 +345,31 @@ impl Queriable for TeamInfo<'_> {
     type QueryRes = Self;
     fn fts_query<'a, 'b>(
         param: &'a str,
+        count: u32,
         db_pool: &'b SqlitePool,
     ) -> AsyncDbRes<'a, Vec<Self::QueryRes>>
     where
         'b: 'a,
     {
         Box::pin(async move {
-            let teams = sqlx::query_as::<_, TeamInfo>(
-                "SELECT id,name,score,logo FROM teams_fts WHERE name MATCH  ? ",
-            )
-            .bind(format!("{}*", param))
-            .fetch_all(db_pool)
-            .await?;
+            let teams = if param.is_empty() {
+                sqlx::query_as::<_, TeamInfo>(
+                    "SELECT id,name,score,logo FROM teams t
+                     ORDER by t.created_at DESC 
+                     LIMIT ?",
+                )
+                .bind(count)
+                .fetch_all(db_pool)
+                .await?
+            } else {
+                sqlx::query_as::<_, TeamInfo>(
+                    "SELECT id,name,score,logo FROM teams_fts WHERE name MATCH  ? || '*' LIMIT ?",
+                )
+                .bind(param)
+                .bind(count)
+                .fetch_all(db_pool)
+                .await?
+            };
             Ok(teams)
         })
     }
@@ -314,18 +378,32 @@ impl Queriable for User<'_> {
     type QueryRes = Self;
     fn fts_query<'a, 'b>(
         param: &'a str,
+        count: u32,
         db_pool: &'b SqlitePool,
     ) -> AsyncDbRes<'a, Vec<Self::QueryRes>>
     where
         'b: 'a,
     {
         Box::pin(async move {
-            let users = sqlx::query_as::<_, User>(
-                "SELECT id,name,score,logo FROM users_fts WHERE name MATCH  ? ",
-            )
-            .bind(format!("{}*", param))
-            .fetch_all(db_pool)
-            .await?;
+            let users = if param.is_empty() {
+                sqlx::query_as::<_, User>(
+                    "SELECT id,name,score,logo FROM users u
+                     ORDER by u.created_at DESC 
+                     LIMIT ?",
+                )
+                .bind(count)
+                .fetch_all(db_pool)
+                .await?
+            } else {
+                sqlx::query_as::<_, User>(
+                    "SELECT id,name,score,logo FROM users_fts WHERE name MATCH  ? || '*' LIMIT ?",
+                )
+                .bind(param)
+                .bind(count)
+                .fetch_all(db_pool)
+                .await?
+            };
+
             Ok(users)
         })
     }
@@ -334,18 +412,31 @@ impl Queriable for EventInfo<'_> {
     type QueryRes = Self;
     fn fts_query<'a, 'b>(
         param: &'a str,
+        count: u32,
         db_pool: &'b SqlitePool,
     ) -> AsyncDbRes<'a, Vec<Self::QueryRes>>
     where
         'b: 'a,
     {
         Box::pin(async move {
-            let events = sqlx::query_as::<_, EventInfo>(
-                "SELECT id,name,logo,event_type,team_size FROM events_fts WHERE name MATCH  ? ",
-            )
-            .bind(format!("{}*", param))
-            .fetch_all(db_pool)
-            .await?;
+            let events = if param.is_empty() {
+                sqlx::query_as::<_, EventInfo>(
+                    "SELECT id,name,logo,event_type,team_size FROM events e
+                     ORDER by e.created_at DESC 
+                     LIMIT ?",
+                )
+                .bind(count)
+                .fetch_all(db_pool)
+                .await?
+            } else {
+                sqlx::query_as::<_, EventInfo>(
+                    "SELECT id,name,logo,event_type,team_size FROM events_fts WHERE name MATCH  ? || '*' LIMIT ?",
+                )
+                .bind(param)
+                .bind(count)
+                .fetch_all(db_pool)
+                .await?
+            };
             Ok(events)
         })
     }
@@ -381,11 +472,12 @@ where
         use ws::Message::*;
         let pool = self.db_pool.clone();
         let addr = ctx.address();
+        let count = self.count;
         match msg {
             Ok(Ping(msg)) => ctx.pong(&msg),
             Ok(Text(param)) => {
                 async move {
-                    let res = TeamInfo::fts_query(&param, &pool)
+                    let res = TeamInfo::fts_query(&param, count, &pool)
                         .await
                         .and_then(|teams| Ok(serde_json::to_string(&teams)?));
                     match res {
@@ -427,11 +519,12 @@ where
         use ws::Message::*;
         let pool = self.db_pool.clone();
         let addr = ctx.address();
+        let count = self.count;
         match msg {
             Ok(Ping(msg)) => ctx.pong(&msg),
             Ok(Text(param)) => {
                 async move {
-                    let res = User::fts_query(&param, &pool)
+                    let res = User::fts_query(&param, count, &pool)
                         .await
                         .and_then(|users| Ok(serde_json::to_string(&users)?));
                     match res {
@@ -473,11 +566,12 @@ where
         use ws::Message::*;
         let pool = self.db_pool.clone();
         let addr = ctx.address();
+        let count = self.count;
         match msg {
             Ok(Ping(msg)) => ctx.pong(&msg),
             Ok(Text(param)) => {
                 async move {
-                    let res = EventInfo::fts_query(&param, &pool)
+                    let res = EventInfo::fts_query(&param, count, &pool)
                         .await
                         .and_then(|events| Ok(serde_json::to_string(&events)?));
                     match res {
@@ -511,15 +605,18 @@ where
             Ok(Ping(msg)) => ctx.pong(&msg),
             Ok(Text(param)) => {
                 let id = self.event_id;
-                let team_opt = self.team_opt.clone();
+                let team_opt = self.team_opt;
+                let count = self.count;
                 async move {
                     let res = match team_opt {
                         Some(ref opt) => match opt {
-                            TeamFtsOpt::TeamInfo => TeamInfo::event_team_fts(&id, &param, &pool)
-                                .await
-                                .and_then(|teams| Ok(serde_json::to_string(&teams)?)),
+                            TeamFtsOpt::TeamInfo => {
+                                TeamInfo::event_team_fts(&id, &param, count, &pool)
+                                    .await
+                                    .and_then(|teams| Ok(serde_json::to_string(&teams)?))
+                            }
                             TeamFtsOpt::RemUserInfo => {
-                                TeamInfo::event_rem_users_fts(&id, &param, &pool)
+                                TeamInfo::event_rem_users_fts(&id, &param, count, &pool)
                                     .await
                                     .and_then(|users| Ok(serde_json::to_string(&users)?))
                             }
@@ -565,13 +662,14 @@ where
         let pool = self.db_pool.clone();
         let addr = ctx.address();
         let id = self.event_id;
-        let team_opt = self.team_opt.clone();
+        let team_opt = self.team_opt;
+        let count = self.count;
         match msg {
             Ok(Ping(msg)) => ctx.pong(&msg),
             Ok(Text(param)) => {
                 async move {
                     let res = match team_opt {
-                        None => User::event_user_fts(&id, &param, &pool)
+                        None => User::event_user_fts(&id, &param, count, &pool)
                             .await
                             .and_then(|users| Ok(serde_json::to_string(&users)?)),
                         Some(_) => unreachable!(),

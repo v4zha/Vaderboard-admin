@@ -1,13 +1,16 @@
 use std::sync::Arc;
 
+use actix::Addr;
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
-use actix_web_actors::ws::{self, WsResponseBuilder};
+use actix_web_actors::ws;
 use erased_serde::Serialize as ErasedSerialize;
 use log::debug;
 use sqlx::SqlitePool;
 
 use crate::models::error_models::VaderError;
-use crate::models::query_models::{CurFtsBuilder, EventInfo, FtsQuery, IdQuery, TeamInfo, Vboard};
+use crate::models::query_models::{
+    CurFtsBuilder, EventInfo, FtsQuery, IdQuery, TeamInfo, VboardClient, VboardSrv,
+};
 use crate::models::v_models::{AppState, Team, User};
 
 #[get("/event/info")]
@@ -28,10 +31,11 @@ pub async fn get_current_event(
         }
     }
 }
-#[get("event/info/team")]
+#[get("event/info/team/{count}")]
 pub async fn get_event_teams(
     app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
+    count: web::Path<u32>,
     req: HttpRequest,
     stream: web::Payload,
 ) -> impl Responder {
@@ -44,9 +48,10 @@ pub async fn get_event_teams(
         match event {
             crate::models::wrapper_models::EventWrapper::TeamEvent(_) => {
                 let event_id = event.get_id();
-                let cur_fts = CurFtsBuilder::<Team>::new(event_id, db_pool.into_inner())
-                    .team_fts()
-                    .build();
+                let cur_fts =
+                    CurFtsBuilder::<Team>::new(event_id, count.into_inner(), db_pool.into_inner())
+                        .team_fts()
+                        .build();
                 ws::start(cur_fts, &req, stream)
             }
             crate::models::wrapper_models::EventWrapper::UserEvent(_) => {
@@ -57,10 +62,11 @@ pub async fn get_event_teams(
         }
     }
 }
-#[get("event/info/team/rem_members")]
+#[get("event/info/team/rem_members/{count}")]
 pub async fn get_event_rem_members(
     app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
+    count: web::Path<u32>,
     req: HttpRequest,
     stream: web::Payload,
 ) -> impl Responder {
@@ -73,9 +79,10 @@ pub async fn get_event_rem_members(
         match event {
             crate::models::wrapper_models::EventWrapper::TeamEvent(_) => {
                 let event_id = event.get_id();
-                let cur_fts = CurFtsBuilder::<Team>::new(event_id, db_pool.into_inner())
-                    .rem_user_fts()
-                    .build();
+                let cur_fts =
+                    CurFtsBuilder::<Team>::new(event_id, count.into_inner(), db_pool.into_inner())
+                        .rem_user_fts()
+                        .build();
                 ws::start(cur_fts, &req, stream)
             }
             crate::models::wrapper_models::EventWrapper::UserEvent(_) => {
@@ -87,10 +94,11 @@ pub async fn get_event_rem_members(
     }
 }
 
-#[get("event/info/user")]
+#[get("event/info/user/{count}")]
 pub async fn get_event_users(
     app_state: web::Data<Arc<AppState>>,
     db_pool: web::Data<SqlitePool>,
+    count: web::Path<u32>,
     req: HttpRequest,
     stream: web::Payload,
 ) -> impl Responder {
@@ -108,7 +116,9 @@ pub async fn get_event_users(
             }
             crate::models::wrapper_models::EventWrapper::UserEvent(_) => {
                 let event_id = event.get_id();
-                let cur_fts = CurFtsBuilder::<User>::new(event_id, db_pool.into_inner()).build();
+                let cur_fts =
+                    CurFtsBuilder::<User>::new(event_id, count.into_inner(), db_pool.into_inner())
+                        .build();
                 ws::start(cur_fts, &req, stream)
             }
         }
@@ -179,66 +189,59 @@ pub async fn get_all_user(db_pool: web::Data<SqlitePool>) -> impl Responder {
     }
 }
 
-#[get("/event/fts")]
+#[get("/event/fts/{count}")]
 pub async fn event_fts(
     req: HttpRequest,
     db_pool: web::Data<SqlitePool>,
+    count: web::Path<u32>,
     stream: web::Payload,
 ) -> impl Responder {
     ws::start(
-        FtsQuery::<EventInfo>::new(db_pool.into_inner()),
+        FtsQuery::<EventInfo>::new(count.into_inner(), db_pool.into_inner()),
         &req,
         stream,
     )
 }
 
-#[get("/team/fts")]
+#[get("/team/fts/{count}")]
 pub async fn team_fts<'a>(
     req: HttpRequest,
     db_pool: web::Data<SqlitePool>,
+    count: web::Path<u32>,
     stream: web::Payload,
 ) -> impl Responder {
     ws::start(
-        FtsQuery::<TeamInfo>::new(db_pool.into_inner()),
+        FtsQuery::<TeamInfo>::new(count.into_inner(), db_pool.into_inner()),
         &req,
         stream,
     )
 }
-#[get("/user/fts")]
+#[get("/user/fts/{count}")]
 pub async fn user_fts(
     req: HttpRequest,
     db_pool: web::Data<SqlitePool>,
+    count: web::Path<u32>,
     stream: web::Payload,
 ) -> impl Responder {
-    ws::start(FtsQuery::<User>::new(db_pool.into_inner()), &req, stream)
+    ws::start(
+        FtsQuery::<User>::new(count.into_inner(), db_pool.into_inner()),
+        &req,
+        stream,
+    )
 }
 
 #[get("/vaderboard")]
 pub async fn vaderboard(
     req: HttpRequest,
     app_state: web::Data<Arc<AppState>>,
+    srv_addr: web::Data<Addr<VboardSrv>>,
     stream: web::Payload,
 ) -> impl Responder {
     let event_state = app_state.current_event.lock().await;
     if event_state.is_none() {
         debug!("Request delined.No event added");
-        HttpResponse::BadRequest().body("No event added.Add event to Fetch details")
+        Ok(HttpResponse::BadRequest().body("No event added.Add event to Fetch details"))
     } else {
-        let vb = Vboard {};
-        let wsb_res = WsResponseBuilder::new(vb, &req, stream).start_with_addr();
-        match wsb_res {
-            Ok(ws_res) => {
-                let mut addrs = app_state.vb_addr.lock().await;
-                addrs.push(ws_res.0);
-                ws_res.1
-            }
-            Err(e) => {
-                log::error!(
-                    "[Error] : Unable to build websocket responder : {}",
-                    e.to_string()
-                );
-                HttpResponse::BadRequest().body("Unable to connect")
-            }
-        }
+        ws::start(VboardClient::new(srv_addr), &req, stream)
     }
 }

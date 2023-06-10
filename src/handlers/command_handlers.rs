@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use actix::Addr;
 use actix_session::Session;
 use actix_web::{post, web, Either, HttpResponse, Responder};
 use log::{error, info};
@@ -9,7 +10,7 @@ use crate::models::command_models::{
     CommandResponse, ContestantInfo, EventReq, MemberInfo, ScoreResponse, ScoreUpdate,
 };
 use crate::models::error_models::VaderError;
-use crate::models::query_models::{EventInfo, EventType, IdQuery, VboardRes};
+use crate::models::query_models::{EventInfo, EventType, IdQuery, VboardRes, VboardSrv};
 use crate::models::v_models::{AdminInfo, AppState, Event, Team, User, VaderEvent};
 use crate::models::wrapper_models::{EventStateWrapper, EventWrapper};
 
@@ -121,12 +122,17 @@ pub async fn start_event(
         //reset score before starting event
         let reset_res = event_state.as_ref().unwrap().reset_score(&db_pool).await;
         if let Err(e) = reset_res {
-            error!("Error reseting score to start event");
-            return HttpResponse::BadRequest().body(format!(
-                "Error resetting score to starte event.\n{}",
-                e.to_string()
-            ));
-        }
+            match e {
+                VaderError::EventActive(_) => {}
+                _ => {
+                    error!("Error reseting score to start event");
+                    return HttpResponse::BadRequest().body(format!(
+                        "Error resetting score to start event.\n{}",
+                        e.to_string()
+                    ));
+                }
+            }
+        };
         let res = event_state.as_mut().unwrap().start_event();
         match res {
             Ok(_) => {
@@ -168,6 +174,7 @@ pub async fn end_event(app_state: web::Data<Arc<AppState>>) -> impl Responder {
 pub async fn update_score(
     score_req: web::Json<ScoreUpdate>,
     app_state: web::Data<Arc<AppState>>,
+    vb_srv: web::Data<Addr<VboardSrv>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let event_state = app_state.current_event.lock().await;
@@ -184,14 +191,13 @@ pub async fn update_score(
         match score_res {
             Ok(new_score) => {
                 info!("Score updated successfully.New score : {}", new_score);
-                let vb_res = event_state.as_ref().unwrap().get_vboard(&db_pool, 10).await;
+                let vb_res = event_state
+                    .as_ref()
+                    .unwrap()
+                    .get_vboard(&db_pool, app_state.vb_count)
+                    .await;
                 match vb_res {
-                    Ok(vb_str) => {
-                        let vb_addr = app_state.vb_addr.lock().await;
-                        vb_addr
-                            .iter()
-                            .for_each(|addr| addr.do_send(VboardRes(vb_str.clone())));
-                    }
+                    Ok(vb_str) => vb_srv.do_send(VboardRes(vb_str)),
                     Err(e) => log::debug!("Error sending Vaderboard : {}", e),
                 }
                 HttpResponse::Ok().json(web::Json(ScoreResponse::new(sr.id, new_score)))

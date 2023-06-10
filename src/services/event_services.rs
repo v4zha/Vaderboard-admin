@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::marker::PhantomData;
 
+use chrono::Utc;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
@@ -16,13 +17,15 @@ impl<'a> Player<'a> for User<'a> {
         let id = self.id.to_string();
         let name = &self.name;
         let logo = self.get_logo();
+        let created_at = Utc::now();
         Box::pin(async move {
             sqlx::query!(
-                "INSERT INTO users (id,name,score,logo) VALUES (?,?,?,?)",
+                "INSERT INTO users (id,name,score,logo,created_at) VALUES (?,?,?,?,?)",
                 id,
                 name,
                 self.score,
-                logo
+                logo,
+                created_at
             )
             .execute(db_pool)
             .await?;
@@ -43,12 +46,14 @@ impl<'a> Player<'a> for Team<'a> {
             let id = self.id.to_string();
             let name = &self.name;
             let logo = self.get_logo();
+            let created_at = Utc::now();
             sqlx::query!(
-                "INSERT INTO teams (id,name,score,logo) VALUES (?,?,?,?)",
+                "INSERT INTO teams (id,name,score,logo,created_at) VALUES (?,?,?,?,?)",
                 id,
                 name,
                 self.score,
-                logo
+                logo,
+                created_at
             )
             .execute(db_pool)
             .await?;
@@ -133,15 +138,17 @@ impl<'a> VaderEvent<'a> for Event<'a, Team<'a>> {
         let logo = self.get_logo();
         let id = self.id.to_string();
         let name = &self.name;
+        let created_at = Utc::now();
         Box::pin(async move {
             if let Some(team_size) = self.team_size {
                 sqlx::query!(
-                    "INSERT INTO events (id,name,logo,event_type,team_size) VALUES (?,?,?,?,?)",
+                    "INSERT INTO events (id,name,logo,event_type,team_size,created_at) VALUES (?,?,?,?,?,?)",
                     id,
                     name,
                     logo,
                     "team_event",
                     team_size,
+                    created_at
                 )
                 .execute(db_pool)
                 .await?;
@@ -187,13 +194,15 @@ impl<'a> VaderEvent<'a> for Event<'a, User<'a>> {
         let logo = self.get_logo();
         let id = self.id.to_string();
         let name = &self.name;
+        let created_at = Utc::now();
         Box::pin(async move {
             sqlx::query!(
-                "INSERT INTO events (id,name,logo,event_type) VALUES (?,?,?,?)",
+                "INSERT INTO events (id,name,logo,event_type,created_at) VALUES (?,?,?,?,?)",
                 id,
                 name,
                 logo,
-                "user_event"
+                "user_event",
+                created_at
             )
             .execute(db_pool)
             .await?;
@@ -268,8 +277,28 @@ impl<'a> Event<'a, Team<'a>, NewEvent> {
     pub fn reset_score(&self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
         let event_id = self.id.to_string();
         Box::pin(async move {
-            sqlx::query!("UPDATE teams SET score=0 WHERE id IN(SELECT t.id FROM events e JOIN event_teams et ON et.event_id = e.id JOIN teams t ON et.team_id = t.id WHERE e.id = ?)",event_id).execute(db_pool).await?;
-            sqlx::query!("UPDATE users SET score=0 WHERE id IN(SELECT u.id FROM events e JOIN event_teams et ON et.event_id = e.id JOIN teams t ON et.team_id = t.id JOIN team_members tm ON tm.team_id = t.id JOIN users u ON tm.user_id = u.id WHERE e.id = ? )",event_id).execute(db_pool).await?;
+            sqlx::query!(
+                "UPDATE teams SET score=0 WHERE 
+                 id IN(SELECT t.id FROM events e 
+                 JOIN event_teams et ON et.event_id = e.id 
+                 JOIN teams t ON et.team_id = t.id 
+                 WHERE e.id = ?)",
+                event_id
+            )
+            .execute(db_pool)
+            .await?;
+            sqlx::query!(
+                "UPDATE users SET score=0 
+                 WHERE id IN(SELECT u.id FROM events e 
+                 JOIN event_teams et ON et.event_id = e.id 
+                 JOIN teams t ON et.team_id = t.id 
+                 JOIN team_members tm ON tm.team_id = t.id 
+                 JOIN users u ON tm.user_id = u.id 
+                 WHERE e.id = ? )",
+                event_id
+            )
+            .execute(db_pool)
+            .await?;
             Ok(())
         })
     }
@@ -278,7 +307,16 @@ impl<'a> Event<'a, User<'a>, NewEvent> {
     pub fn reset_score(&self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
         let event_id = self.id.to_string();
         Box::pin(async move {
-            sqlx::query!("UPDATE users SET score=0 WHERE id IN(SELECT u.id FROM events e JOIN event_users eu ON eu.event_id = e.id JOIN users u ON eu.user_id = u.id WHERE e.id = ?)",event_id).execute(db_pool).await?;
+            sqlx::query!(
+                "UPDATE users SET score=0 
+                 WHERE id IN(SELECT u.id FROM events e 
+                 JOIN event_users eu ON eu.event_id = e.id 
+                 JOIN users u ON eu.user_id = u.id 
+                 WHERE e.id = ?)",
+                event_id
+            )
+            .execute(db_pool)
+            .await?;
             Ok(())
         })
     }
@@ -347,7 +385,10 @@ impl<'a> Team<'a> {
         let id = team_id.to_string();
         Box::pin(async move {
             let team = sqlx::query_as::<_, Team>(
-                "SELECT t.id AS id,t.name AS name, t.score AS score,t.logo AS logo,GROUP_CONCAT(tm.user_id,',') AS team_members FROM teams t JOIN team_members tm ON tm.team_id = t.id WHERE t.id = ? GROUP BY t.id",
+                "SELECT t.id AS id,t.name AS name, t.score AS score,t.logo AS logo,
+                GROUP_CONCAT(tm.user_id,',') AS team_members 
+                FROM teams t JOIN team_members tm ON tm.team_id = t.id 
+                WHERE t.id = ? GROUP BY t.id",
             )
             .bind(id)
             .fetch_one(db_pool)
@@ -411,17 +452,35 @@ impl<'a> User<'a> {
     pub fn event_user_fts(
         event_id: &Uuid,
         param: &'a str,
+        count: u32,
         db_pool: &'a SqlitePool,
     ) -> AsyncDbRes<'a, Vec<Self>> {
         let event_id = event_id.to_string();
         Box::pin(async move {
-            let users = sqlx::query_as::<_, User>(
-            "SELECT id,name,score,logo FROM users_fts u JOIN event_users ut ON ut.user_id=u.id WHERE ut.event_id = ? AND name MATCH  ? ",
-            )
-            .bind(&event_id)
-            .bind(format!("{}*", param))
-            .fetch_all(db_pool)
-            .await?;
+            let users = if param.is_empty() {
+                sqlx::query_as::<_, User>(
+                    "SELECT id,name,score,logo FROM users u 
+                     JOIN event_users ut ON ut.user_id=u.id 
+                     WHERE ut.event_id = ? 
+                     LIMIT ?",
+                )
+                .bind(&event_id)
+                .bind(count)
+                .fetch_all(db_pool)
+                .await?
+            } else {
+                sqlx::query_as::<_, User>(
+                    "SELECT id,name,score,logo FROM users_fts u 
+                     JOIN event_users ut ON ut.user_id=u.id 
+                     WHERE ut.event_id = ? AND name MATCH  ? || '*'
+                     LIMIT ?",
+                )
+                .bind(&event_id)
+                .bind(param)
+                .bind(count)
+                .fetch_all(db_pool)
+                .await?
+            };
             Ok(users)
         })
     }
@@ -435,8 +494,8 @@ pub trait VaderBoard<'a> {
     type VbRes: Queriable;
     fn get_vboard<'b>(
         &'a self,
-        db_pool: &'b SqlitePool,
         count: u32,
+        db_pool: &'b SqlitePool,
     ) -> AsyncDbRes<'a, Vec<Self::VbRes>>
     where
         'b: 'a;
@@ -446,16 +505,21 @@ impl<'a, S: VbStateMarker + EventState> VaderBoard<'a> for Event<'a, Team<'a>, S
     type VbRes = TeamInfo<'a>;
     fn get_vboard<'b>(
         &'a self,
-        db_pool: &'b SqlitePool,
         count: u32,
+        db_pool: &'b SqlitePool,
     ) -> AsyncDbRes<'a, Vec<Self::VbRes>>
     where
         'b: 'a,
     {
+        let event_id = self.id.to_string();
         Box::pin(async move {
             let teams = sqlx::query_as::<_, TeamInfo>(
-                "SELECT id,name,score,logo FROM teams ORDER BY score DESC LIMIT ?",
+                "SELECT id,name,score,logo FROM teams t  
+                 JOIN event_teams et ON t.id=et.team_id 
+                 WHERE et.event_id=?
+                 ORDER BY score DESC LIMIT ?",
             )
+            .bind(&event_id)
             .bind(count)
             .fetch_all(db_pool)
             .await?;
@@ -468,16 +532,21 @@ impl<'a, S: VbStateMarker + EventState> VaderBoard<'a> for Event<'a, User<'a>, S
     type VbRes = User<'a>;
     fn get_vboard<'b>(
         &'a self,
-        db_pool: &'b SqlitePool,
         count: u32,
+        db_pool: &'b SqlitePool,
     ) -> AsyncDbRes<'a, Vec<Self::VbRes>>
     where
         'b: 'a,
     {
+        let event_id = self.id.to_string();
         Box::pin(async move {
             let users = sqlx::query_as::<_, User>(
-                "SELECT id,name,score,logo FROM users ORDER BY score DESC LIMIT ?",
+                "SELECT id,name,score,logo FROM users u
+                 JOIN event_users eu ON u.id=eu.user_id
+                 WHERE eu.event_id=?
+                 ORDER BY score DESC LIMIT ?",
             )
+            .bind(&event_id)
             .bind(count)
             .fetch_all(db_pool)
             .await?;
