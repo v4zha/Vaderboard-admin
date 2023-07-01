@@ -12,9 +12,10 @@ use uuid::Uuid;
 use crate::models::error_models::VaderError;
 use crate::models::query_models::{
     CurEventFts, CurEventFtsWrapper, CurFtsConnect, CurFtsDisconnect, CurFtsServer, CurFtsStop,
-    EventInfo, EventQuery, EventType, FtsQuery, TeamFtsOpt, TeamInfo,
+    EventInfo, EventQueryBuilder, EventType, FtsQuery, TeamFtsOpt, TeamInfo,
 };
 use crate::models::v_models::{AsyncDbRes, Event, EventState, Player, Team, User};
+
 impl FromRow<'_, SqliteRow> for Team<'_> {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
         let id: Uuid = Uuid::parse_str(row.get("id")).map_err(|_e| sqlx::Error::ColumnDecode {
@@ -107,77 +108,87 @@ where
         })
     }
 }
-impl<'a, U> Event<'a, Team<'a>, U>
-where
-    U: EventState,
-{
-    pub fn get_info(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, EventQuery<Team>> {
-        let event_id = self.id.to_string();
-        Box::pin(async move {
-            let event = sqlx::query_as::<_, Event<'a, Team, U>>(
-                "SELECT id,name,logo,team_size FROM events WHERE id = ? ORDER BY created_at DESC",
-            )
-            .bind(&event_id)
-            .fetch_one(db_pool)
-            .await?;
-            let contestants = sqlx::query_as::<_, Team>("SELECT t.id AS id,t.name AS name,t.score AS score,t.logo AS logo,
-                                                        GROUP_CONCAT(tm.user_id,',') AS team_members 
-                                                        FROM events e JOIN event_teams et ON et.event_id = e.id 
-                                                        JOIN teams t ON et.team_id=t.id 
-                                                        JOIN team_members tm ON tm.team_id = t.id 
-                                                        WHERE e.id = ? GROUP BY t.id")
-                .bind(&event_id)
-                .fetch_all(db_pool)
-                .await?;
-            if let Some(team_size) = self.team_size {
-                Ok(EventQuery {
-                    id: event.id,
-                    name: event.name,
-                    logo: event.logo,
-                    contestants,
-                    event_type: EventType::TeamEvent { team_size },
-                    marker: PhantomData::<&'a Team>,
-                })
-            } else {
-                Err(VaderError::TeamSizeMismatch("No Team size specified"))
-            }
-        })
-    }
-}
-impl<'a, U> Event<'a, User<'a>, U>
-where
-    U: EventState,
-{
-    pub fn get_info(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, EventQuery<User>> {
-        let event_id = self.id.to_string();
-        Box::pin(async move {
-            let event = sqlx::query_as::<_, Event<'a, User, U>>(
-                "SELECT id,name,logo,team_size FROM events WHERE id = ? ORDER BY created_at DESC",
-            )
-            .bind(&event_id)
-            .fetch_one(db_pool)
-            .await?;
-            let contestants = sqlx::query_as::<_, User>(
-                "SELECT u.id AS id,u.name AS name,u.score AS score,u.logo AS logo 
-                FROM events e JOIN event_users eu ON eu.event_id=e.id 
-                JOIN users u ON eu.user_id=u.id 
-                WHERE e.id = ? GROUP BY u.id",
-            )
-            .bind(&event_id)
-            .fetch_all(db_pool)
-            .await?;
-
-            Ok(EventQuery {
-                id: event.id,
-                name: event.name,
-                logo: event.logo,
-                contestants,
-                event_type: EventType::UserEvent,
-                marker: PhantomData::<&'a User>,
-            })
-        })
-    }
-}
+// impl<'a, U> Event<'a, Team<'a>, U>
+// where
+//     U: EventState,
+// {
+//     pub fn get_info(
+//         &'a self,
+//         state: EventQueryState,
+//         db_pool: &'a SqlitePool,
+//     ) -> AsyncDbRes<'a, EventQuery<Team>> {
+//         let event_id = self.id.to_string();
+//         Box::pin(async move {
+//             let event = sqlx::query_as::<_, Event<'a, Team, U>>(
+//                 "SELECT id,name,logo,team_size FROM events WHERE id = ? ORDER BY created_at DESC",
+//             )
+//             .bind(&event_id)
+//             .fetch_one(db_pool)
+//             .await?;
+//             let contestants = sqlx::query_as::<_, Team>("SELECT t.id AS id,t.name AS name,t.score AS score,t.logo AS logo,
+//                                                         GROUP_CONCAT(tm.user_id,',') AS team_members
+//                                                         FROM events e JOIN event_teams et ON et.event_id = e.id
+//                                                         JOIN teams t ON et.team_id=t.id
+//                                                         JOIN team_members tm ON tm.team_id = t.id
+//                                                         WHERE e.id = ? GROUP BY t.id")
+//                 .bind(&event_id)
+//                 .fetch_all(db_pool)
+//                 .await?;
+//             if let Some(team_size) = self.team_size {
+//                 Ok(EventQuery {
+//                     id: event.id,
+//                     name: event.name,
+//                     logo: event.logo,
+//                     contestants,
+//                     event_type: EventType::TeamEvent { team_size },
+//                     state,
+//                     marker: PhantomData::<&'a Team>,
+//                 })
+//             } else {
+//                 Err(VaderError::TeamSizeMismatch("No Team size specified"))
+//             }
+//         })
+//     }
+// }
+// impl<'a, U> Event<'a, User<'a>, U>
+// where
+//     U: EventState,
+// {
+//     pub fn get_info(
+//         &'a self,
+//         state: EventQueryState,
+//         db_pool: &'a SqlitePool,
+//     ) -> AsyncDbRes<'a, EventQuery<User>> {
+//         let event_id = self.id.to_string();
+//         Box::pin(async move {
+//             let event = sqlx::query_as::<_, Event<'a, User, U>>(
+//                 "SELECT id,name,logo,team_size FROM events WHERE id = ? ORDER BY created_at DESC",
+//             )
+//             .bind(&event_id)
+//             .fetch_one(db_pool)
+//             .await?;
+//             let contestants = sqlx::query_as::<_, User>(
+//                 "SELECT u.id AS id,u.name AS name,u.score AS score,u.logo AS logo
+//                 FROM events e JOIN event_users eu ON eu.event_id=e.id
+//                 JOIN users u ON eu.user_id=u.id
+//                 WHERE e.id = ? GROUP BY u.id",
+//             )
+//             .bind(&event_id)
+//             .fetch_all(db_pool)
+//             .await?;
+//
+//             Ok(EventQuery {
+//                 id: event.id,
+//                 name: event.name,
+//                 logo: event.logo,
+//                 contestants,
+//                 event_type: EventType::UserEvent,
+//                 state,
+//                 marker: PhantomData::<&'a User>,
+//             })
+//         })
+//     }
+// }
 impl<'a, 'b> FromRow<'a, SqliteRow> for EventInfo<'b> {
     fn from_row(row: &'a SqliteRow) -> Result<EventInfo<'b>, sqlx::Error> {
         let id_str: String = row.get("id");
@@ -780,5 +791,29 @@ where
             description: Some("The Current Event ended".to_string()),
         }));
         ctx.stop();
+    }
+}
+
+impl<'a, U: EventState> From<&Event<'a, Team<'a>, U>> for EventQueryBuilder<'a> {
+    fn from(e: &Event<'a, Team<'a>, U>) -> Self {
+        EventQueryBuilder {
+            id: e.id,
+            name: e.name.clone(),
+            logo: e.logo.clone(),
+            event_type: EventType::TeamEvent {
+                team_size: e.team_size.unwrap(),
+            },
+        }
+    }
+}
+
+impl<'a, U: EventState> From<&Event<'a, User<'a>, U>> for EventQueryBuilder<'a> {
+    fn from(e: &Event<'a, User<'a>, U>) -> Self {
+        EventQueryBuilder {
+            id: e.id,
+            name: e.name.clone(),
+            logo: e.logo.clone(),
+            event_type: EventType::UserEvent,
+        }
     }
 }

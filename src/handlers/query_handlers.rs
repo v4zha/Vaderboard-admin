@@ -3,32 +3,25 @@ use std::sync::Arc;
 use actix::Addr;
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
 use actix_web_actors::ws;
-use erased_serde::Serialize as ErasedSerialize;
 use log::debug;
 use sqlx::SqlitePool;
 
 use crate::models::error_models::VaderError;
 use crate::models::query_models::{
-    CurFtsBuilder, CurFtsServer, EventInfo, FtsQuery, IdQuery, TeamInfo, VboardClient, VboardSrv,
+    CurFtsBuilder, CurFtsServer, EventInfo, EventQuery, FtsQuery, IdQuery, TeamInfo, VboardClient,
+    VboardSrv,
 };
 use crate::models::v_models::{AppState, Team, User};
 
 #[get("/event/info")]
-pub async fn get_current_event(
-    app_state: web::Data<Arc<AppState>>,
-    db_pool: web::Data<SqlitePool>,
-) -> impl Responder {
+pub async fn get_current_event(app_state: web::Data<Arc<AppState>>) -> impl Responder {
     let event_state = app_state.current_event.lock().await;
     if event_state.is_none() {
         debug!("Request delined.No event added");
         HttpResponse::BadRequest().body("No event added.Add event to Fetch details")
     } else {
-        let res: Result<Box<dyn ErasedSerialize>, VaderError> =
-            event_state.as_ref().unwrap().get_event(&db_pool).await;
-        match res {
-            Ok(res) => HttpResponse::Ok().json(web::Json(res)),
-            Err(e) => HttpResponse::BadRequest().body(e.to_string()),
-        }
+        let res: EventQuery = event_state.as_ref().unwrap().get_event();
+        HttpResponse::Ok().json(web::Json(res))
     }
 }
 #[get("event/info/team/{count}")]

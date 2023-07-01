@@ -1,11 +1,11 @@
 use std::borrow::Cow;
 
-use erased_serde::Serialize as ErasedSerialize;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use super::command_models::MemberInfo;
 use super::error_models::VaderError;
+use super::query_models::{EventQuery, EventQueryBuilder, EventQueryState};
 use super::v_models::{
     ActiveEvent, AsyncDbRes, EndEvent, Event, NewEvent, Player, Team, User, VaderEvent,
 };
@@ -185,41 +185,68 @@ impl<'a> EventWrapper<'a> {
             },
         }
     }
-    pub fn get_event(
-        &'a self,
-        db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<Box<dyn ErasedSerialize + 'a>> {
+    pub fn get_event(&'a self) -> EventQuery<'a> {
         match self {
-            Self::TeamEvent(sw) => match sw {
-                EventStateWrapper::New(e) => Box::pin(async move {
-                    let event = e.get_info(db_pool).await?;
-                    Ok(Box::new(event) as Box<dyn ErasedSerialize>)
-                }),
-                EventStateWrapper::Active(e) => Box::pin(async move {
-                    let event = e.get_info(db_pool).await?;
-                    Ok(Box::new(event) as Box<dyn ErasedSerialize>)
-                }),
-                EventStateWrapper::End(e) => Box::pin(async move {
-                    let event = e.get_info(db_pool).await?;
-                    Ok(Box::new(event) as Box<dyn ErasedSerialize>)
-                }),
+            EventWrapper::TeamEvent(sw) => match sw {
+                EventStateWrapper::New(e) => {
+                    EventQueryBuilder::from(e).build_with_state(EventQueryState::Added)
+                }
+                EventStateWrapper::Active(e) => {
+                    EventQueryBuilder::from(e).build_with_state(EventQueryState::Start)
+                }
+                EventStateWrapper::End(e) => {
+                    EventQueryBuilder::from(e).build_with_state(EventQueryState::Stop)
+                }
             },
-            Self::UserEvent(sw) => match sw {
-                EventStateWrapper::New(e) => Box::pin(async move {
-                    let event = e.get_info(db_pool).await?;
-                    Ok(Box::new(event) as Box<dyn ErasedSerialize>)
-                }),
-                EventStateWrapper::Active(e) => Box::pin(async move {
-                    let event = e.get_info(db_pool).await?;
-                    Ok(Box::new(event) as Box<dyn ErasedSerialize>)
-                }),
-                EventStateWrapper::End(e) => Box::pin(async move {
-                    let event = e.get_info(db_pool).await?;
-                    Ok(Box::new(event) as Box<dyn ErasedSerialize>)
-                }),
+            EventWrapper::UserEvent(sw) => match sw {
+                EventStateWrapper::New(e) => {
+                    EventQueryBuilder::from(e).build_with_state(EventQueryState::Added)
+                }
+                EventStateWrapper::Active(e) => {
+                    EventQueryBuilder::from(e).build_with_state(EventQueryState::Start)
+                }
+                EventStateWrapper::End(e) => {
+                    EventQueryBuilder::from(e).build_with_state(EventQueryState::Stop)
+                }
             },
         }
     }
+
+    // pub fn get_event(
+    //     &'a self,
+    //     db_pool: &'a SqlitePool,
+    // ) -> AsyncDbRes<Box<dyn ErasedSerialize + 'a>> {
+    //     match self {
+    //         Self::TeamEvent(sw) => match sw {
+    //             EventStateWrapper::New(e) =>Box::pin(async move {
+    //                 let event = e.get_info(EventQueryState::Added, db_pool).await?;
+    //                 Ok(Box::new(event) as Box<dyn ErasedSerialize>)
+    //             }),
+    //             EventStateWrapper::Active(e) => Box::pin(async move {
+    //                 let event = e.get_info(EventQueryState::Start, db_pool).await?;
+    //                 Ok(Box::new(event) as Box<dyn ErasedSerialize>)
+    //             }),
+    //             EventStateWrapper::End(e) => Box::pin(async move {
+    //                 let event = e.get_info(EventQueryState::Stop, db_pool).await?;
+    //                 Ok(Box::new(event) as Box<dyn ErasedSerialize>)
+    //             }),
+    //         },
+    //         Self::UserEvent(sw) => match sw {
+    //             EventStateWrapper::New(e) => Box::pin(async move {
+    //                 let event = e.get_info(EventQueryState::Added, db_pool).await?;
+    //                 Ok(Box::new(event) as Box<dyn ErasedSerialize>)
+    //             }),
+    //             EventStateWrapper::Active(e) => Box::pin(async move {
+    //                 let event = e.get_info(EventQueryState::Start, db_pool).await?;
+    //                 Ok(Box::new(event) as Box<dyn ErasedSerialize>)
+    //             }),
+    //             EventStateWrapper::End(e) => Box::pin(async move {
+    //                 let event = e.get_info(EventQueryState::Stop, db_pool).await?;
+    //                 Ok(Box::new(event) as Box<dyn ErasedSerialize>)
+    //             }),
+    //         },
+    //     }
+    // }
 
     pub fn get_vboard(
         &'a self,

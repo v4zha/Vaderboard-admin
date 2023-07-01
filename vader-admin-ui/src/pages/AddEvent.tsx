@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiUrl } from "../utils/apiUtils";
 
 enum EventTypeOpt {
     UserEvent = "UserEvent",
@@ -42,7 +43,7 @@ const AddEvent: React.FC = (): JSX.Element => {
     };
     const eventSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const url = "http://localhost:8080/admin/event/add";
+        const url = `${apiUrl}/admin/event/add`;
         let data;
         let headers = new Headers();
         headers.append("Content-Type", "application/json");

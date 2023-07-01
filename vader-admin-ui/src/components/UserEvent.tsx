@@ -15,10 +15,14 @@ import MenuIcon from "@mui/icons-material/Menu";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import UserList from "./UserList";
+import { apiUrl, userCurFtsUrl } from "../utils/apiUtils";
+import { EventInfo, EventState } from "../Types";
 
 interface UserEventProps {
     eventInfo: EventInfo;
 }
+
 enum UserEventOpts {
     EventInfo = "EventInfo",
     User = "Users",
@@ -30,16 +34,73 @@ const UserEvent: React.FC<UserEventProps> = ({
     const navigate = useNavigate();
     const [opt, setOpt] = useState<UserEventOpts>(UserEventOpts.EventInfo);
     const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
+    const [eventState, setEventState] = useState<EventState>(eventInfo.state);
     const getContent = (opt: UserEventOpts): JSX.Element => {
         switch (opt) {
             case UserEventOpts.EventInfo: {
-                return <></>;
+                return (
+                    <>
+                        <Typography
+                            variant="h3"
+                            color="inherit"
+                            component="div"
+                        >
+                            {eventInfo.name}
+                        </Typography>
+                        <Button
+                            onClick={() => {
+                                if (eventState == EventState.Stop) {
+                                    navigate("/home");
+                                } else {
+                                    setStateChange(eventState + 1);
+                                }
+                            }}
+                        >
+                            {EventState[eventState + 1]}
+                        </Button>
+                    </>
+                );
             }
             case UserEventOpts.User: {
-                return <></>;
+                return (
+                    <Container>
+                        <Button
+                            onClick={() => {
+                                navigate("/user/add");
+                            }}
+                        >
+                            Add User
+                        </Button>
+                        <UserList
+                            url={userCurFtsUrl}
+                            updateScore={eventState == EventState.Start}
+                        />
+                    </Container>
+                );
             }
         }
     };
+
+    const setStateChange = async (newState: EventState) => {
+        let reqUrl: string = "";
+        switch (newState) {
+            case EventState.Start: {
+                reqUrl = `${apiUrl}/admin/event/start`;
+                break;
+            }
+            case EventState.Stop: {
+                reqUrl = `${apiUrl}/admin/event/stop`;
+                break;
+            }
+        }
+        const res = await fetch(reqUrl, {
+            method: "POST",
+        });
+        if (res.ok) {
+            setEventState(newState);
+        }
+    };
+
     return (
         <Container>
             <Box sx={{ flexGrow: 1 }}>
@@ -66,10 +127,10 @@ const UserEvent: React.FC<UserEventProps> = ({
                 </AppBar>
                 <Button
                     onClick={() => {
-                        navigate("/event");
+                        navigate("/home");
                     }}
                 >
-                    add Event
+                    Go Home
                 </Button>
                 <Drawer
                     sx={{
@@ -92,14 +153,11 @@ const UserEvent: React.FC<UserEventProps> = ({
                     >
                         <ChevronLeftIcon />
                     </IconButton>
-                    <List
-                        sx={{
-                            mr: "2rem",
-                        }}
-                    >
+                    <List sx={{ mr: "2rem" }}>
                         <ListItem
                             onClick={() => {
                                 setOpt(UserEventOpts.EventInfo);
+                                setDrawerOpen(false);
                             }}
                         >
                             <ListItemText
@@ -110,6 +168,7 @@ const UserEvent: React.FC<UserEventProps> = ({
                         <ListItem
                             onClick={() => {
                                 setOpt(UserEventOpts.User);
+                                setDrawerOpen(false);
                             }}
                         >
                             <ListItemText

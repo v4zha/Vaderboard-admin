@@ -14,15 +14,48 @@ use uuid::Uuid;
 use super::v_models::{Player, Team, User};
 use crate::services::query_services::Queriable;
 
+// #[derive(Serialize)]
+// pub struct EventQuery<'a, T: Player<'a>> {
+//     pub id: Uuid,
+//     pub name: Cow<'a, str>,
+//     pub logo: Option<Cow<'a, str>>,
+//     pub contestants: Vec<T>,
+//     pub event_type: EventType,
+//     pub state: EventQueryState,
+// }
+
 #[derive(Serialize)]
-pub struct EventQuery<'a, T: Player<'a>> {
+pub struct EventQuery<'a> {
     pub id: Uuid,
     pub name: Cow<'a, str>,
     pub logo: Option<Cow<'a, str>>,
-    pub contestants: Vec<T>,
     pub event_type: EventType,
-    #[serde(skip_serializing)]
-    pub marker: PhantomData<&'a T>,
+    pub state: EventQueryState,
+}
+
+pub struct EventQueryBuilder<'a> {
+    pub id: Uuid,
+    pub name: Cow<'a, str>,
+    pub logo: Option<Cow<'a, str>>,
+    pub event_type: EventType,
+}
+impl<'a> EventQueryBuilder<'a> {
+    pub fn build_with_state(self, state: EventQueryState) -> EventQuery<'a> {
+        EventQuery {
+            id: self.id,
+            name: self.name,
+            logo: self.logo,
+            event_type: self.event_type,
+            state,
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub enum EventQueryState {
+    Added,
+    Start,
+    Stop,
 }
 
 #[derive(Serialize, Deserialize)]

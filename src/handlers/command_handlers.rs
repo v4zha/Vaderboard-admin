@@ -268,7 +268,7 @@ pub async fn add_team(
     }
 }
 
-#[post("/event/user/add/")]
+#[post("/event/user/add")]
 pub async fn add_user(
     c_info: web::Json<ContestantInfo<'_>>,
     app_state: web::Data<Arc<AppState>>,

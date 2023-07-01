@@ -1,19 +1,31 @@
+export type EventType = "UserEvent" | { TeamEvent: { team_size: number } };
 
-type EventType = "UserEvent" | { TeamEvent: { team_size: number } };
-interface EventInfo {
+export interface EventInfo {
   id: string;
   name: string;
   logo: string;
-  event_type: EventType
+  event_type: EventType;
+  state: EventState;
+}
+export enum EventState {
+  Added,
+  Start,
+  Stop,
 }
 
 
-interface PlayerInfo {
+
+export interface PlayerInfo {
   id: string;
   name: string;
   logo: string;
   score: number;
 }
 
-type UserInfo = PlayerInfo;
-type TeamInfo = PlayerInfo;
+
+export interface ScoreUpdate {
+  id: string;
+  score: number;
+}
+export type UserInfo = PlayerInfo;
+export type TeamInfo = PlayerInfo;

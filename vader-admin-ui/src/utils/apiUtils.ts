@@ -1,23 +1,38 @@
+import { EventInfo, TeamInfo, UserInfo } from "../Types";
+
+export const apiUrl = "http://localhost:8080";
+export const apiUrlWs = "ws://localhost:8080";
+
 export const getEvents = async (): Promise<Array<EventInfo>> => {
-    let events: Array<EventInfo> = [];
-    const url = "http://localhost:8080/event/info/all";
-    const res = await fetch(url, { method: "GET" });
-    events = await res.json();
-    return events;
+  let events: Array<EventInfo> = [];
+  const url = `${apiUrl}/event/info/all`;
+  const res = await fetch(url, { method: "GET" });
+  events = await res.json();
+  return events;
 }
 export const getUsers = async (): Promise<Array<UserInfo>> => {
-    let users: Array<UserInfo> = [];
-    const url = "http://localhost:8080/user/info/all";
-    const res = await fetch(url, { method: "GET" });
-    users = await res.json();
-    return users;
+  let users: Array<UserInfo> = [];
+  const url = `${apiUrl}/user/info/all`;
+  const res = await fetch(url, { method: "GET" });
+  users = await res.json();
+  return users;
 }
 
 export const getTeams = async (): Promise<Array<TeamInfo>> => {
-    let teams: Array<TeamInfo> = [];
-    const url = "http://localhost:8080/team/info/all";
-    const res = await fetch(url, { method: "GET" });
-    teams = await res.json();
-    return teams;
+  let teams: Array<TeamInfo> = [];
+  const url = `${apiUrl}/team/info/all`;
+  const res = await fetch(url, { method: "GET" });
+  teams = await res.json();
+  return teams;
 }
 
+
+export const eventFtsUrl = `${apiUrlWs}/event/fts/20`;
+
+export const teamFtsUrl = `${apiUrlWs}/team/fts/20`;
+
+export const userFtsUrl = `${apiUrlWs}/user/fts/20`;
+
+export const userCurFtsUrl = `${apiUrlWs}/event/info/user/20`;
+export const teamCurFtsUrl = `${apiUrlWs}/event/info/team/20`;
+export const remMemCurFtsUrl = `${apiUrlWs}/event/info/team/rem_members/20`;

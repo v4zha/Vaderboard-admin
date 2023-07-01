@@ -1,0 +1,7 @@
+// this is a sample file for dot env fields
+HOST=0.0.0.0
+PORT= 8080
+DATABASE_URL=sqlite:vaderboard.db
+ADMIN_USERNAME=v4zha
+ADMIN_PASSWORD=<enter your password>
+VADERBOARD_LIMIT=20

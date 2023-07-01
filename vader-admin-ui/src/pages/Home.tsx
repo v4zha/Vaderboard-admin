@@ -12,6 +12,7 @@ import UserList from "../components/UserList";
 import TeamList from "../components/TeamList";
 import { Button, Drawer, List, ListItem, ListItemText } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { eventFtsUrl, teamFtsUrl, userFtsUrl } from "../utils/apiUtils";
 
 enum HomeOpts {
     Event = "Events",
@@ -26,13 +27,13 @@ const Home = (): JSX.Element => {
     const getList = (opt: HomeOpts): JSX.Element => {
         switch (opt) {
             case HomeOpts.Event: {
-                return <EventList />;
+                return <EventList url={eventFtsUrl} />;
             }
             case HomeOpts.User: {
-                return <UserList />;
+                return <UserList url={userFtsUrl} />;
             }
             case HomeOpts.Team: {
-                return <TeamList />;
+                return <TeamList url={teamFtsUrl} />;
             }
         }
     };
@@ -65,7 +66,7 @@ const Home = (): JSX.Element => {
                         navigate("/event");
                     }}
                 >
-                    add Event
+                    Event
                 </Button>
                 <Drawer
                     sx={{
@@ -96,6 +97,7 @@ const Home = (): JSX.Element => {
                         <ListItem
                             onClick={() => {
                                 setOpt(HomeOpts.Event);
+                                setDrawerOpen(false);
                             }}
                         >
                             <ListItemText
@@ -106,6 +108,7 @@ const Home = (): JSX.Element => {
                         <ListItem
                             onClick={() => {
                                 setOpt(HomeOpts.Team);
+                                setDrawerOpen(false);
                             }}
                         >
                             <ListItemText
@@ -116,6 +119,7 @@ const Home = (): JSX.Element => {
                         <ListItem
                             onClick={() => {
                                 setOpt(HomeOpts.User);
+                                setDrawerOpen(false);
                             }}
                         >
                             <ListItemText
