@@ -35,6 +35,7 @@ const UserEvent: React.FC<UserEventProps> = ({
     const [opt, setOpt] = useState<UserEventOpts>(UserEventOpts.EventInfo);
     const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
     const [eventState, setEventState] = useState<EventState>(eventInfo.state);
+    console.log("User event , Event State : ",eventState);
     const getContent = (opt: UserEventOpts): JSX.Element => {
         switch (opt) {
             case UserEventOpts.EventInfo: {

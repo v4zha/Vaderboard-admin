@@ -8,6 +8,7 @@ use actix::{Actor, Addr, AsyncContext, Message};
 use actix_web::{web, Either};
 use actix_web_actors::ws;
 use serde::{Deserialize, Serialize};
+use serde_repr::Serialize_repr;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
@@ -51,7 +52,8 @@ impl<'a> EventQueryBuilder<'a> {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize_repr)]
+#[repr(u8)]
 pub enum EventQueryState {
     Added,
     Start,

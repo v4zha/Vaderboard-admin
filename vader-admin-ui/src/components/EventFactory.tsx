@@ -5,13 +5,14 @@ import { EventInfo } from "../Types";
 interface FactoryProps {
     eventInfo: EventInfo;
 }
-const EventFactory: React.FC<FactoryProps> = (
-    {eventInfo}: FactoryProps
-): JSX.Element => {
+const EventFactory: React.FC<FactoryProps> = ({
+    eventInfo,
+}: FactoryProps): JSX.Element => {
+    console.log("Event info : ", eventInfo);
     return eventInfo.event_type === "UserEvent" ? (
-            <UserEvent eventInfo={eventInfo} />
-        ) : (
-            <TeamEvent eventInfo={eventInfo} />
-        );
+        <UserEvent eventInfo={eventInfo} />
+    ) : (
+        <TeamEvent eventInfo={eventInfo} />
+    );
 };
 export default EventFactory;

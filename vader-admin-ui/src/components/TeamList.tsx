@@ -6,9 +6,13 @@ import {
     TextField,
     Container,
     Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
 } from "@mui/material";
 import FileCopyIcon from "@mui/icons-material/FileCopy";
-import {  useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { TeamInfo } from "../Types";
 import { apiUrl } from "../utils/apiUtils";
 
@@ -17,15 +21,12 @@ interface TeamListProps {
     updateScore?: boolean;
 }
 
-interface ScoreUpdate {
-    id: string;
-    score: number;
-}
-
 const TeamList = (props: TeamListProps): JSX.Element => {
     const [teams, setTeams] = useState<Array<TeamInfo>>([]);
     const [socket, setSocket] = useState<WebSocket>();
-    const [updatedScores, setUpdatedScores] = useState<Array<ScoreUpdate>>([]);
+    const [selectedTeamId, setSelectedTeamId] = useState<string>("");
+    const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+    const [newScore, setNewScore] = useState<number>(0);
 
     useEffect(() => {
         const ws = new WebSocket(props.url);
@@ -62,47 +63,41 @@ const TeamList = (props: TeamListProps): JSX.Element => {
     };
 
     const handleScoreUpdate = (teamId: string) => {
-        const updatedScore = updatedScores.find((score) => score.id === teamId);
-        if (updatedScore) {
-            const data = JSON.stringify(updatedScore);
-
-            fetch(`${apiUrl}admin/score/update`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: data,
-            })
-                .then((response) => {
-                    if (response.ok) {
-                        console.log("Score updated successfully");
-                    } else {
-                        console.error("Failed to update score");
-                    }
-                })
-                .catch((error) => {
-                    console.error("Failed to update score:", error);
-                });
-        }
+        setSelectedTeamId(teamId);
+        setIsDialogOpen(true);
     };
 
-    const handleScoreChange = (
-        event: React.ChangeEvent<HTMLInputElement>,
-        teamId: string
-    ) => {
-        const updatedScore = Number(event.target.value);
-        const updatedScoresCopy = [...updatedScores];
-        const existingScoreIndex = updatedScoresCopy.findIndex(
-            (score) => score.id === teamId
-        );
+    const handleScoreChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setNewScore(Number(event.target.value));
+    };
 
-        if (existingScoreIndex !== -1) {
-            updatedScoresCopy[existingScoreIndex].score = updatedScore;
-        } else {
-            updatedScoresCopy.push({ id: teamId, score: updatedScore });
-        }
+    const handleSubmit = () => {
+        const updatedScore = {
+            id: selectedTeamId,
+            score: newScore,
+        };
 
-        setUpdatedScores(updatedScoresCopy);
+        const data = JSON.stringify(updatedScore);
+
+        fetch(`${apiUrl}/admin/score/update`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: data,
+        })
+            .then((response) => {
+                if (response.ok) {
+                    console.log("Score updated successfully");
+                } else {
+                    console.error("Failed to update score");
+                }
+            })
+            .catch((error) => {
+                console.error("Failed to update score:", error);
+            });
+
+        setIsDialogOpen(false);
     };
 
     return (
@@ -122,20 +117,6 @@ const TeamList = (props: TeamListProps): JSX.Element => {
                         />
                         {props.updateScore && (
                             <div>
-                                <TextField
-                                    type="number"
-                                    value={
-                                        updatedScores.find(
-                                            (score) => score.id === team.id
-                                        )?.score || ""
-                                    }
-                                    onChange={(event) =>
-                                        handleScoreChange(
-                                            event as React.ChangeEvent<HTMLInputElement>,
-                                            team.id
-                                        )
-                                    }
-                                />
                                 <Button
                                     onClick={() => handleScoreUpdate(team.id)}
                                     variant="outlined"
@@ -154,6 +135,31 @@ const TeamList = (props: TeamListProps): JSX.Element => {
                     </ListItem>
                 ))}
             </List>
+            <Dialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
+                <DialogTitle>Update Score</DialogTitle>
+                <DialogContent>
+                    <TextField
+                        label="Current Score"
+                        value={
+                            teams.find((team) => team.id === selectedTeamId)
+                                ?.score || ""
+                        }
+                        disabled
+                    />
+                    <TextField
+                        label="New Score"
+                        type="number"
+                        value={newScore}
+                        onChange={handleScoreChange}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setIsDialogOpen(false)}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleSubmit}>Submit</Button>
+                </DialogActions>
+            </Dialog>
         </Container>
     );
 };
