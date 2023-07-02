@@ -14,7 +14,7 @@ import {
 import FileCopyIcon from "@mui/icons-material/FileCopy";
 import { useEffect, useState } from "react";
 import { TeamInfo } from "../Types";
-import { apiUrl } from "../utils/apiUtils";
+import { apiUrl } from "../utils/ApiUtils";
 
 interface TeamListProps {
     url: string;
@@ -153,6 +153,8 @@ const TeamList = (props: TeamListProps): JSX.Element => {
                         label="New Score"
                         type="number"
                         value={newScore}
+                        color="secondary"
+                        inputProps={{ min: -99999 }}
                         onChange={handleScoreChange}
                     />
                 </DialogContent>

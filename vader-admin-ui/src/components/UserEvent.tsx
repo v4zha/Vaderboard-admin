@@ -16,7 +16,7 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import UserList from "./UserList";
-import { apiUrl, userCurFtsUrl } from "../utils/apiUtils";
+import { apiUrl, userCurFtsUrl } from "../utils/ApiUtils";
 import { EventInfo, EventState, UserEventOpts } from "../Types";
 
 interface UserEventProps {
@@ -74,7 +74,7 @@ export const UserEvent: React.FC<UserEventProps> = ({
                         </Button>
                         <UserList
                             url={userCurFtsUrl}
-                            updateScore={eventState == EventState.Start}
+                            updateScore={eventState === EventState.Start}
                         />
                     </Container>
                 );

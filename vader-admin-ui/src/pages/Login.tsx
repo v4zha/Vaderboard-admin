@@ -38,11 +38,7 @@ const Login = (): JSX.Element => {
                     </Typography>
                 </div>
                 <div className="login-container">
-                    <Typography
-                        variant="h6"
-                        color="primary.default"
-                        component="div"
-                    >
+                    <Typography variant="h6" color="secondary" component="div">
                         Admin Login
                     </Typography>
                     <form onSubmit={loginSubmit} className="form-container">

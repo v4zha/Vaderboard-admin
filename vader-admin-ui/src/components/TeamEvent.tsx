@@ -16,7 +16,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import { useNavigate } from "react-router-dom";
 import TeamList from "./TeamList";
-import { apiUrl, teamCurFtsUrl } from "../utils/apiUtils";
+import { apiUrl, teamCurFtsUrl } from "../utils/ApiUtils";
 import { EventInfo, EventState, TeamEventOpts } from "../Types";
 
 interface TeamEventProps {
@@ -79,7 +79,7 @@ export const TeamEvent: React.FC<TeamEventProps> = ({
                         </Button>
                         <TeamList
                             url={teamCurFtsUrl}
-                            updateScore={eventState == EventState.Start}
+                            updateScore={eventState === EventState.Start}
                         />
                     </Container>
                 );

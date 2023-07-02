@@ -12,7 +12,7 @@ import UserList from "../components/UserList";
 import TeamList from "../components/TeamList";
 import { Button, Drawer, List, ListItem, ListItemText } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { eventFtsUrl, teamFtsUrl, userFtsUrl } from "../utils/apiUtils";
+import { eventFtsUrl, teamFtsUrl, userFtsUrl } from "../utils/ApiUtils";
 
 enum HomeOpts {
     Event = "Events",

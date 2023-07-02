@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { EventInfo } from "../Types";
-import { apiUrl } from "../utils/apiUtils";
+import { apiUrl } from "../utils/ApiUtils";
 import { UserEvent } from "../components/UserEvent";
 import { TeamEvent } from "../components/TeamEvent";
 import { UserEventOpts, TeamEventOpts } from "../Types";

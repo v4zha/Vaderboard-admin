@@ -7,7 +7,7 @@ import {
     Snackbar,
     IconButton,
 } from "@mui/material";
-import { apiUrl } from "../utils/apiUtils";
+import { apiUrl } from "../utils/ApiUtils";
 import { useNavigate, useLocation } from "react-router-dom";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import { TeamEventOpts } from "../Types";
@@ -72,7 +72,7 @@ export const AddTeam = () => {
     };
 
     const handleAddMember = () => {
-        if (teamMembers.length < maxTeamSize - 1) {
+        if (teamMembers.length < maxTeamSize) {
             setTeamMembers([...teamMembers, { name: "" }]);
         }
     };
@@ -119,7 +119,7 @@ export const AddTeam = () => {
                             />
                         </div>
                     ))}
-                    {teamMembers.length < maxTeamSize - 1 && (
+                    {teamMembers.length < maxTeamSize && (
                         <IconButton onClick={handleAddMember} color="primary">
                             <AddCircleIcon />
                         </IconButton>

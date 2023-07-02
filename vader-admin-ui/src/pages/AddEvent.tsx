@@ -1,4 +1,5 @@
 import {
+    Box,
     Button,
     Container,
     FormControl,
@@ -10,7 +11,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiUrl } from "../utils/apiUtils";
+import { apiUrl } from "../utils/ApiUtils";
 
 enum EventTypeOpt {
     UserEvent = "UserEvent",
@@ -74,8 +75,8 @@ const AddEvent: React.FC = (): JSX.Element => {
                     VaderBoard
                 </Typography>
             </div>
-            <div className="login-container">
-                <Typography variant="h6" color="inherit" component="div">
+            <Box className="login-container" color={"background.primary"}>
+                <Typography variant="h6" color="text.secondary" component="div">
                     Event Registration
                 </Typography>
                 <form onSubmit={eventSubmit} className="form-container">
@@ -95,6 +96,7 @@ const AddEvent: React.FC = (): JSX.Element => {
                             id="event-type-label"
                             value={eventType}
                             label="event-type"
+                            color="secondary"
                             onChange={(e) =>
                                 setEventType(e.target.value as EventTypeOpt)
                             }
@@ -117,7 +119,7 @@ const AddEvent: React.FC = (): JSX.Element => {
                         Add Event
                     </Button>
                 </form>
-            </div>
+            </Box>
         </Container>
     );
 };
