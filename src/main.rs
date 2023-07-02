@@ -99,9 +99,6 @@ async fn main() -> std::io::Result<()> {
             .service(team_fts)
             .service(user_fts)
             .service(vaderboard)
-            //test VaderBoard
-            .service(Files::new("/vb", "vb_test").index_file("vboard.html"))
-            //remove vb_test in production
             .service(Files::new("/", "dist").index_file("index.html"))
     })
     .bind(host_port)?
