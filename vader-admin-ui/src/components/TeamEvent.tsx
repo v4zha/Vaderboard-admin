@@ -18,26 +18,22 @@ import { useNavigate } from "react-router-dom";
 import TeamList from "./TeamList";
 import { apiUrl, remMemCurFtsUrl, teamCurFtsUrl } from "../utils/apiUtils";
 import UserList from "./UserList";
-import { EventInfo, EventState } from "../Types";
+import { EventInfo, EventState, TeamEventOpts } from "../Types";
 
 interface TeamEventProps {
     eventInfo: EventInfo;
+    drawerOpt: TeamEventOpts;
 }
 
-enum TeamEventOpts {
-    EventDetails = "Event Details",
-    TeamList = "Team List",
-    RemUserList = "Remaining User List",
-}
-
-const TeamEvent: React.FC<TeamEventProps> = ({
+export const TeamEvent: React.FC<TeamEventProps> = ({
     eventInfo,
+    drawerOpt,
 }: TeamEventProps): JSX.Element => {
     const navigate = useNavigate();
-    const [opt, setOpt] = useState<TeamEventOpts>(TeamEventOpts.EventDetails);
+    const [opt, setOpt] = useState<TeamEventOpts>(drawerOpt);
     const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
     const [eventState, setEventState] = useState<EventState>(eventInfo.state);
-    const getContent = (opt: TeamEventOpts): JSX.Element => {
+    const GetContent = ({ opt }: { opt: TeamEventOpts }): JSX.Element => {
         switch (opt) {
             case TeamEventOpts.EventDetails:
                 return (
@@ -187,8 +183,7 @@ const TeamEvent: React.FC<TeamEventProps> = ({
                     </List>
                 </Drawer>
             </Box>
-            {getContent(opt)}
+            {GetContent({ opt })}
         </Container>
     );
 };
-export default TeamEvent;

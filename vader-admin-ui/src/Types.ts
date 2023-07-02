@@ -13,7 +13,15 @@ export enum EventState {
   Stop,
 }
 
-
+export enum UserEventOpts {
+  EventDetails = "EventInfo",
+  User = "Users",
+}
+export enum TeamEventOpts {
+  EventDetails = "Event Details",
+  TeamList = "Team List",
+  RemUserList = "Remaining User List",
+}
 
 export interface PlayerInfo {
   id: string;

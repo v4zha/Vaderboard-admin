@@ -24,7 +24,7 @@ const Home = (): JSX.Element => {
     const [opt, setOpt] = useState<HomeOpts>(HomeOpts.Event);
     const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
     const navigate = useNavigate();
-    const getList = (opt: HomeOpts): JSX.Element => {
+    const GetList = ({ opt }: { opt: HomeOpts }): JSX.Element => {
         switch (opt) {
             case HomeOpts.Event: {
                 return <EventList url={eventFtsUrl} />;
@@ -130,7 +130,7 @@ const Home = (): JSX.Element => {
                     </List>
                 </Drawer>
             </Box>
-            {getList(opt)}
+            {GetList({ opt })}
         </Container>
     );
 };

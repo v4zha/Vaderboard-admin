@@ -89,6 +89,9 @@ const TeamList = (props: TeamListProps): JSX.Element => {
             .then((response) => {
                 if (response.ok) {
                     console.log("Score updated successfully");
+                    if (socket) {
+                        socket.send("");
+                    }
                 } else {
                     console.error("Failed to update score");
                 }

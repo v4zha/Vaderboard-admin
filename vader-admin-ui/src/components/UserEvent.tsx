@@ -17,28 +17,28 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import UserList from "./UserList";
 import { apiUrl, userCurFtsUrl } from "../utils/apiUtils";
-import { EventInfo, EventState } from "../Types";
+import { EventInfo, EventState, UserEventOpts } from "../Types";
 
 interface UserEventProps {
     eventInfo: EventInfo;
+    drawerOpt: UserEventOpts;
 }
 
-enum UserEventOpts {
-    EventInfo = "EventInfo",
-    User = "Users",
-}
-
-const UserEvent: React.FC<UserEventProps> = ({
+export const UserEvent: React.FC<UserEventProps> = ({
     eventInfo,
+    drawerOpt,
 }: UserEventProps): JSX.Element => {
     const navigate = useNavigate();
-    const [opt, setOpt] = useState<UserEventOpts>(UserEventOpts.EventInfo);
+    const [opt, setOpt] = useState<UserEventOpts>(drawerOpt);
     const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
     const [eventState, setEventState] = useState<EventState>(eventInfo.state);
-    console.log("User event , Event State : ",eventState);
-    const getContent = (opt: UserEventOpts): JSX.Element => {
+    const GetContent: React.FC<{ opt: UserEventOpts }> = ({
+        opt,
+    }: {
+        opt: UserEventOpts;
+    }): JSX.Element => {
         switch (opt) {
-            case UserEventOpts.EventInfo: {
+            case UserEventOpts.EventDetails: {
                 return (
                     <>
                         <Typography
@@ -78,6 +78,9 @@ const UserEvent: React.FC<UserEventProps> = ({
                         />
                     </Container>
                 );
+            }
+            default: {
+                return <></>;
             }
         }
     };
@@ -157,7 +160,7 @@ const UserEvent: React.FC<UserEventProps> = ({
                     <List sx={{ mr: "2rem" }}>
                         <ListItem
                             onClick={() => {
-                                setOpt(UserEventOpts.EventInfo);
+                                setOpt(UserEventOpts.EventDetails);
                                 setDrawerOpen(false);
                             }}
                         >
@@ -180,9 +183,7 @@ const UserEvent: React.FC<UserEventProps> = ({
                     </List>
                 </Drawer>
             </Box>
-            {getContent(opt)}
+            {GetContent({ opt })}
         </Container>
     );
 };
-
-export default UserEvent;

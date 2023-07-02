@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from "react";
+import React, { Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
@@ -6,11 +6,10 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { AddUser } from "./pages/AddUser";
 import { AddTeamMembers } from "./pages/AddTeamMember";
 import { AddTeam } from "./pages/AddTeam";
-
-const Login = lazy(() => import("./pages/Login"));
-const Home = lazy(() => import("./pages/Home"));
-const Event = lazy(() => import("./pages/Event"));
-const AddEvent = lazy(() => import("./pages/AddEvent"));
+import Login from "./pages/Login";
+import Home from "./pages/Home";
+import AddEvent from "./pages/AddEvent";
+import { VaderEvent } from "./pages/Event";
 
 const theme = createTheme({
     palette: {
@@ -35,7 +34,7 @@ const App = (): JSX.Element => (
                 <Routes>
                     <Route path="/" element={<Login />} />
                     <Route path="/home" element={<Home />} />
-                    <Route path="/event" element={<Event />} />
+                    <Route path="/event" element={<VaderEvent />} />
                     <Route path="/event/add" element={<AddEvent />} />
                     <Route path="/user/add" element={<AddUser />} />
                     <Route path="/team/add" element={<AddTeam />} />

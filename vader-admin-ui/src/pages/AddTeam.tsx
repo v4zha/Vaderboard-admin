@@ -1,7 +1,14 @@
 import React, { useState } from "react";
-import { Button, Container, TextField, Typography, Snackbar } from "@mui/material";
+import {
+    Button,
+    Container,
+    TextField,
+    Typography,
+    Snackbar,
+} from "@mui/material";
 import { apiUrl } from "../utils/apiUtils";
 import { useNavigate } from "react-router-dom";
+import { TeamEventOpts } from "../Types";
 
 export const AddTeam = () => {
     const [teamName, setTeamName] = useState("");
@@ -9,11 +16,11 @@ export const AddTeam = () => {
     const [snackbarMessage, setSnackbarMessage] = useState("");
     const navigate = useNavigate();
 
-    const handleFormSubmit = async (e:React.FormEvent<HTMLFormElement>) => {
+    const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const url = `${apiUrl}/admin/event/team/add`;
         const data = {
-           name: teamName,
+            name: teamName,
         };
         try {
             const response = await fetch(url, {
@@ -26,12 +33,16 @@ export const AddTeam = () => {
             if (response.ok) {
                 setShowSnackbar(true);
                 setSnackbarMessage("Team added successfully!");
-                navigate("/event");
+                navigate("/event", {
+                    state: {
+                        opt: TeamEventOpts.TeamList,
+                    },
+                });
             } else {
                 setShowSnackbar(true);
                 setSnackbarMessage("Failed to add team");
             }
-        } catch (error:any) {
+        } catch (error: any) {
             setShowSnackbar(true);
             setSnackbarMessage("Error: " + error.message);
         }
@@ -76,4 +87,3 @@ export const AddTeam = () => {
         </Container>
     );
 };
-

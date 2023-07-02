@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button, Container, TextField, Typography } from "@mui/material";
 import { apiUrl } from "../utils/apiUtils";
 import { useNavigate } from "react-router-dom";
+import { UserEventOpts } from "../Types";
 
 export const AddUser: React.FC = () => {
     const [userName, setUserName] = useState("");
@@ -23,7 +24,9 @@ export const AddUser: React.FC = () => {
             });
             if (response.ok) {
                 console.log("User added successfully!");
-                navigate("/event");
+                navigate("/event", {
+                    state: { opt: UserEventOpts.User },
+                });
             } else {
                 console.log("Failed to add user");
             }
