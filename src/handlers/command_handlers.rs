@@ -12,7 +12,7 @@ use crate::models::command_models::{
 };
 use crate::models::error_models::VaderError;
 use crate::models::query_models::{
-    CurFtsServer, CurFtsStop, EventInfo, EventType, IdQuery, VboardRes, VboardSrv,
+    CurFtsServer, CurFtsStop, EventInfo, EventType, IdQuery, VboardGet, VboardSrv,
 };
 use crate::models::v_models::{AdminInfo, AppState, Event, Team, User, VaderEvent};
 use crate::models::wrapper_models::{EventStateWrapper, EventWrapper};
@@ -115,6 +115,7 @@ where
 #[post("/event/start")]
 pub async fn start_event(
     app_state: web::Data<Arc<AppState>>,
+    vb_srv: web::Data<Addr<VboardSrv>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let mut event_state = app_state.current_event.lock().await;
@@ -139,6 +140,7 @@ pub async fn start_event(
         let res = event_state.as_mut().unwrap().start_event();
         match res {
             Ok(_) => {
+                vb_srv.do_send(VboardGet);
                 let body = format!(
                     "Event id : [{}] started successfully",
                     event_state.as_ref().unwrap().get_id()
@@ -198,15 +200,7 @@ pub async fn update_score(
         match score_res {
             Ok(new_score) => {
                 info!("Score updated successfully.New score : {}", new_score);
-                let vb_res = event_state
-                    .as_ref()
-                    .unwrap()
-                    .get_vboard(&db_pool, app_state.vb_count)
-                    .await;
-                match vb_res {
-                    Ok(vb_str) => vb_srv.do_send(VboardRes(vb_str)),
-                    Err(e) => log::debug!("Error sending Vaderboard : {}", e),
-                }
+                vb_srv.do_send(VboardGet);
                 HttpResponse::Ok().json(web::Json(ScoreResponse::new(sr.id, new_score)))
             }
             Err(err) => {
@@ -282,11 +276,7 @@ pub async fn add_team_with_members(
     } else {
         let tm = tm_info.into_inner();
         let team = Into::<Team>::into(tm.team_info);
-        let members: Vec<User> = tm
-            .members
-            .into_iter()
-            .map(|u| Into::<User>::into(u))
-            .collect();
+        let members: Vec<User> = tm.members.into_iter().map(Into::<User>::into).collect();
         let team_id = team.id;
         let res = event_state
             .as_ref()

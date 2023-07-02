@@ -9,10 +9,10 @@ use actix_web::{web, Either};
 use actix_web_actors::ws;
 use serde::{Deserialize, Serialize};
 use serde_repr::Serialize_repr;
-use sqlx::SqlitePool;
+use sqlx::{Pool, Sqlite, SqlitePool};
 use uuid::Uuid;
 
-use super::v_models::{Player, Team, User};
+use super::v_models::{AppState, Player, Team, User};
 use crate::services::query_services::Queriable;
 
 // #[derive(Serialize)]
@@ -255,6 +255,9 @@ where
         }
     }
 }
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct VboardGet;
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -297,12 +300,15 @@ impl Actor for VboardClient {
 
 pub struct VboardSrv {
     pub vb_addr: HashSet<Addr<VboardClient>>,
+    pub app_state: Arc<AppState>,
+    pub db_pool: Pool<Sqlite>,
 }
 impl VboardSrv {
-    // can also derive default instead : )
-    pub fn new() -> Self {
+    pub fn new(app_state: Arc<AppState>, db_pool: Pool<Sqlite>) -> Self {
         VboardSrv {
             vb_addr: HashSet::new(),
+            app_state,
+            db_pool,
         }
     }
 }

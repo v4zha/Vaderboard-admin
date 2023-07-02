@@ -100,7 +100,7 @@ impl<'a> Team<'a> {
                 // todo! implement add_users()
                 // can be optimized by using single transaction
                 // athakumbol our player add aayillelum full rollback cheyyam : )
-                mem_user.add_player(&db_pool).await?;
+                mem_user.add_player(db_pool).await?;
             }
             Self::add_members_from_id(&self.id, members.clone(), db_pool).await
         })

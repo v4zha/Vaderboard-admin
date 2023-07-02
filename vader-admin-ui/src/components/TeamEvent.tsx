@@ -16,11 +16,11 @@ import MenuIcon from "@mui/icons-material/Menu";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import { useNavigate } from "react-router-dom";
 import TeamList from "./TeamList";
-import { apiUrl,teamCurFtsUrl } from "../utils/apiUtils";
+import { apiUrl, teamCurFtsUrl } from "../utils/apiUtils";
 import { EventInfo, EventState, TeamEventOpts } from "../Types";
 
 interface TeamEventProps {
-eventInfo: EventInfo;
+    eventInfo: EventInfo;
     drawerOpt: TeamEventOpts;
 }
 
@@ -62,7 +62,17 @@ export const TeamEvent: React.FC<TeamEventProps> = ({
                     <Container>
                         <Button
                             onClick={() => {
-                                navigate("/team/add");
+                                navigate("/team/add", {
+                                    state: {
+                                        maxTeamSize: (
+                                            eventInfo.event_type as {
+                                                TeamEvent: {
+                                                    team_size: number;
+                                                };
+                                            }
+                                        ).TeamEvent.team_size,
+                                    },
+                                });
                             }}
                         >
                             Add Team

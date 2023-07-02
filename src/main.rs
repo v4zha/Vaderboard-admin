@@ -52,7 +52,7 @@ async fn main() -> std::io::Result<()> {
         .expect("Error connecting to Database");
     let app_state = Arc::new(AppState::new(vb_count));
     //VaderBoard server Actor
-    let vb_srv = VboardSrv::new().start();
+    let vb_srv = VboardSrv::new(app_state.clone(), db_pool.clone()).start();
     //Current Event Fts Actor
     let cur_fts = CurFtsServer::new().start();
     log::info!("Database connection successful");
@@ -99,6 +99,9 @@ async fn main() -> std::io::Result<()> {
             .service(team_fts)
             .service(user_fts)
             .service(vaderboard)
+            //test VaderBoard
+            .service(Files::new("/vb", "vb_test").index_file("vboard.html"))
+            //remove vb_test in production
             .service(Files::new("/", "dist").index_file("index.html"))
     })
     .bind(host_port)?

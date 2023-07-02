@@ -151,7 +151,7 @@ impl<'a> EventWrapper<'a> {
         match self {
             Self::TeamEvent(sw) => match sw {
                 EventStateWrapper::New(e) => Box::pin(async move {
-                    let team_id = team.id.clone();
+                    let team_id = team.id;
                     let team_size = e.team_size.unwrap() as usize;
                     team.with_members(members, team_size, db_pool).await?;
                     e.add_participant_from_id(team_id, db_pool).await

@@ -3,14 +3,17 @@ name = "vader-admin"
 version = "0.1.0"
 edition = "2021"
 build = "build.rs"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 actix-web = "^4.3"
-sqlx = { version = "^0.6", features = ["sqlite", "runtime-actix-native-tls","chrono"] }
+sqlx = { version = "^0.6", features = [
+  "sqlite",
+  "runtime-actix-native-tls",
+  "chrono",
+] }
 serde = { version = "^1.0", features = ['derive'] }
 serde_json = "^1.0"
-serde_repr="^0.1"
+serde_repr = "^0.1"
 log = "^0.4"
 env_logger = "^0.10"
 dotenvy = "^0.15"
