@@ -18,8 +18,8 @@ mod services;
 use actix_files::Files;
 
 use crate::handlers::command_handlers::{
-    add_event, add_team, add_team_members, add_user, delete_event, delete_team, delete_user,
-    end_event, login, reset_score, start_event, update_score,
+    add_event, add_team, add_team_members, add_team_with_members, add_user, delete_event,
+    delete_team, delete_user, end_event, login, reset_score, start_event, update_score,
 };
 use crate::handlers::query_handlers::{
     event_fts, get_all_event, get_all_team, get_all_user, get_current_event, get_event_info,
@@ -76,6 +76,7 @@ async fn main() -> std::io::Result<()> {
                     .service(add_user)
                     .service(add_team)
                     .service(add_team_members)
+                    .service(add_team_with_members)
                     .service(start_event)
                     .service(update_score)
                     .service(reset_score)

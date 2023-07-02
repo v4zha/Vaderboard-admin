@@ -45,6 +45,12 @@ pub struct ContestantInfo<'a> {
     logo: Option<Cow<'a, str>>,
 }
 
+#[derive(Deserialize)]
+pub struct TeamWithMembers<'a> {
+    pub team_info: ContestantInfo<'a>,
+    pub members: Vec<ContestantInfo<'a>>,
+}
+
 impl<'a> From<ContestantInfo<'a>> for User<'a> {
     fn from(ci: ContestantInfo) -> User {
         User::new(ci.name, ci.logo)

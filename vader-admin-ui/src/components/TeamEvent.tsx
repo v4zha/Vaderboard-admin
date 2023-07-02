@@ -16,12 +16,11 @@ import MenuIcon from "@mui/icons-material/Menu";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import { useNavigate } from "react-router-dom";
 import TeamList from "./TeamList";
-import { apiUrl, remMemCurFtsUrl, teamCurFtsUrl } from "../utils/apiUtils";
-import UserList from "./UserList";
+import { apiUrl,teamCurFtsUrl } from "../utils/apiUtils";
 import { EventInfo, EventState, TeamEventOpts } from "../Types";
 
 interface TeamEventProps {
-    eventInfo: EventInfo;
+eventInfo: EventInfo;
     drawerOpt: TeamEventOpts;
 }
 
@@ -74,8 +73,6 @@ export const TeamEvent: React.FC<TeamEventProps> = ({
                         />
                     </Container>
                 );
-            case TeamEventOpts.RemUserList:
-                return <UserList url={remMemCurFtsUrl} />;
             default:
                 return <></>;
         }
@@ -171,14 +168,6 @@ export const TeamEvent: React.FC<TeamEventProps> = ({
                             }}
                         >
                             <ListItemText primary={TeamEventOpts.TeamList} />
-                        </ListItem>
-                        <ListItem
-                            onClick={() => {
-                                setOpt(TeamEventOpts.RemUserList);
-                                setDrawerOpen(false);
-                            }}
-                        >
-                            <ListItemText primary={TeamEventOpts.RemUserList} />
                         </ListItem>
                     </List>
                 </Drawer>

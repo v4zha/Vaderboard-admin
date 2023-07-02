@@ -8,6 +8,7 @@ use sqlx::SqlitePool;
 
 use crate::models::command_models::{
     CommandResponse, ContestantInfo, EventReq, MemberInfo, ScoreResponse, ScoreUpdate,
+    TeamWithMembers,
 };
 use crate::models::error_models::VaderError;
 use crate::models::query_models::{
@@ -252,6 +253,46 @@ pub async fn add_team(
         let team = Into::<Team>::into(c_info.into_inner());
         let team_id = team.id;
         let res = event_state.as_ref().unwrap().add_team(team, &db_pool).await;
+        match res {
+            Ok(_) => {
+                info!("Team  added successfully : {}", team_id);
+                HttpResponse::Ok().json(web::Json(CommandResponse::new(
+                    "Team added successfully",
+                    team_id,
+                )))
+            }
+            Err(err) => {
+                error!("Error adding Team :\n[error] : {}", err);
+                HttpResponse::BadRequest().body(err.to_string())
+            }
+        }
+    }
+}
+
+#[post("/event/team/add/with_members")]
+pub async fn add_team_with_members(
+    tm_info: web::Json<TeamWithMembers<'_>>,
+    app_state: web::Data<Arc<AppState>>,
+    db_pool: web::Data<SqlitePool>,
+) -> impl Responder {
+    let event_state = app_state.current_event.lock().await;
+    if event_state.is_none() {
+        error!("Request delined.No event added");
+        HttpResponse::BadRequest().body("No event added.Add event to start event")
+    } else {
+        let tm = tm_info.into_inner();
+        let team = Into::<Team>::into(tm.team_info);
+        let members: Vec<User> = tm
+            .members
+            .into_iter()
+            .map(|u| Into::<User>::into(u))
+            .collect();
+        let team_id = team.id;
+        let res = event_state
+            .as_ref()
+            .unwrap()
+            .add_team_with_members(&team, &members, &db_pool)
+            .await;
         match res {
             Ok(_) => {
                 info!("Team  added successfully : {}", team_id);

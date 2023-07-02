@@ -141,20 +141,48 @@ impl<'a> EventWrapper<'a> {
             }),
         }
     }
+
+    pub fn add_team_with_members(
+        &'a self,
+        team: &'a Team<'a>,
+        members: &'a [User<'a>],
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a, ()> {
+        match self {
+            Self::TeamEvent(sw) => match sw {
+                EventStateWrapper::New(e) => Box::pin(async move {
+                    let team_id = team.id.clone();
+                    let team_size = e.team_size.unwrap() as usize;
+                    team.with_members(members, team_size, db_pool).await?;
+                    e.add_participant_from_id(team_id, db_pool).await
+                }),
+                _ => Box::pin(async move {
+                    Err(VaderError::EventActive(
+                        "Team cannot be added as Event already started",
+                    ))
+                }),
+            },
+            Self::UserEvent(_) => Box::pin(async move {
+                Err(VaderError::EventTypeMismatch(
+                    "Cannot add team in user event",
+                ))
+            }),
+        }
+    }
+
     pub fn add_team_members(&self, mi: &'a MemberInfo, db_pool: &'a SqlitePool) -> AsyncDbRes<()> {
         match self {
-            Self::TeamEvent(sw) => {
-                match sw {
-                    EventStateWrapper::New(e) => Box::pin(async move {
-                        e.add_team_members(&mi.team_id, &mi.members, db_pool).await
-                    }),
-                    _ => Box::pin(async move {
-                        Err(VaderError::EventActive(
-                            "TeamMembers cannot be added as Event already started",
-                        ))
-                    }),
-                }
-            }
+            Self::TeamEvent(sw) => match sw {
+                EventStateWrapper::New(e) => Box::pin(async move {
+                    e.add_team_members(&mi.team_id, mi.members.as_slice(), db_pool)
+                        .await
+                }),
+                _ => Box::pin(async move {
+                    Err(VaderError::EventActive(
+                        "TeamMembers cannot be added as Event already started",
+                    ))
+                }),
+            },
             Self::UserEvent(_) => Box::pin(async move {
                 Err(VaderError::EventTypeMismatch(
                     "Cannot add teamMember in user event",

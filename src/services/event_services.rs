@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 use std::marker::PhantomData;
+use std::ops::Deref;
+use std::sync::Arc;
 
 use chrono::Utc;
 use sqlx::SqlitePool;
@@ -67,16 +69,55 @@ impl<'a> Player<'a> for Team<'a> {
         self.logo.clone().unwrap_or(Cow::Borrowed("")).to_string()
     }
 }
+//Vec newtype : )
+#[derive(Clone)]
+struct Uarc(Arc<Vec<Uuid>>);
+impl Deref for Uarc {
+    type Target = [Uuid];
+
+    fn deref(&self) -> &Self::Target {
+        self.0.as_slice()
+    }
+}
 impl<'a> Team<'a> {
-    fn add_members_from_id(
-        team_id: &'a Uuid,
-        members: &'a [Uuid],
+    pub fn with_members(
+        &'a self,
+        mem_users: &'a [User<'a>],
+        team_size: usize,
         db_pool: &'a SqlitePool,
     ) -> AsyncDbRes<'a, ()> {
         Box::pin(async move {
+            if mem_users.len() > team_size {
+                return Err(VaderError::TeamSizeMismatch(
+                    "No of members greater than team size",
+                ));
+            }
+            self.add_player(db_pool).await?;
+            let members: Uarc = Uarc(Arc::new(
+                mem_users.iter().map(|u| u.id).collect::<Vec<Uuid>>(),
+            ));
+            for mem_user in mem_users {
+                // todo! implement add_users()
+                // can be optimized by using single transaction
+                // athakumbol our player add aayillelum full rollback cheyyam : )
+                mem_user.add_player(&db_pool).await?;
+            }
+            Self::add_members_from_id(&self.id, members.clone(), db_pool).await
+        })
+    }
+
+    fn add_members_from_id<T>(
+        team_id: &'a Uuid,
+        members: T,
+        db_pool: &'a SqlitePool,
+    ) -> AsyncDbRes<'a, ()>
+    where
+        T: Send + 'a + Deref<Target = [Uuid]>,
+    {
+        Box::pin(async move {
             let mut transaction = db_pool.begin().await?;
             let team_id = team_id.to_string();
-            for mem_id in members {
+            for mem_id in members.as_ref() {
                 let user_id = mem_id.to_string();
                 let res = sqlx::query!(
                     "INSERT INTO team_members (team_id,user_id) VALUES (?,?)",
