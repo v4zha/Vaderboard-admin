@@ -7,12 +7,11 @@ use log::{error, info};
 use sqlx::SqlitePool;
 
 use crate::models::command_models::{
-    CommandResponse, ContestantInfo, EventReq, MemberInfo, ScoreResponse, ScoreUpdate,
-    TeamWithMembers,
+    CommandResponse, ContestantInfo, EventReq, MemberInfo, ScoreUpdate, TeamWithMembers,
 };
 use crate::models::error_models::VaderError;
 use crate::models::query_models::{
-    CurFtsServer, CurFtsStop, EventInfo, EventType, IdQuery, VboardGet, VboardSrv,
+    CurFtsServer, CurFtsStop, EventInfo, EventType, IdQuery, TransferType, VboardGet, VboardSrv,
 };
 use crate::models::v_models::{AdminInfo, AppState, Event, Team, User, VaderEvent};
 use crate::models::wrapper_models::{EventStateWrapper, EventWrapper};
@@ -140,7 +139,7 @@ pub async fn start_event(
         let res = event_state.as_mut().unwrap().start_event();
         match res {
             Ok(_) => {
-                vb_srv.do_send(VboardGet);
+                vb_srv.do_send(VboardGet(TransferType::Broadcast));
                 let body = format!(
                     "Event id : [{}] started successfully",
                     event_state.as_ref().unwrap().get_id()
@@ -198,10 +197,10 @@ pub async fn update_score(
             .update_score_by_id(&sr.id, sr.score, &db_pool)
             .await;
         match score_res {
-            Ok(new_score) => {
-                info!("Score updated successfully.New score : {}", new_score);
-                vb_srv.do_send(VboardGet);
-                HttpResponse::Ok().json(web::Json(ScoreResponse::new(sr.id, new_score)))
+            Ok(_) => {
+                info!("Score updated successfully.");
+                vb_srv.do_send(VboardGet(TransferType::Broadcast));
+                HttpResponse::Ok().body("Score Updated")
             }
             Err(err) => {
                 error!("Error updating score :\n[error] : {}", err);

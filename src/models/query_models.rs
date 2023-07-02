@@ -255,13 +255,19 @@ where
         }
     }
 }
-#[derive(Message)]
-#[rtype(result = "()")]
-pub struct VboardGet;
+
+pub enum TransferType {
+    Broadcast,
+    Unicast(Addr<VboardClient>),
+}
 
 #[derive(Message)]
 #[rtype(result = "()")]
-pub struct VboardRes<'a>(pub Cow<'a, str>);
+pub struct VboardGet(pub TransferType);
+
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct VboardRes<'a>(pub Cow<'a, str>, pub Option<TransferType>);
 
 #[derive(Message)]
 #[rtype(result = "()")]

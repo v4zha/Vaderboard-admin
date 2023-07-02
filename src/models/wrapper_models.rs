@@ -74,11 +74,11 @@ impl<'a> EventWrapper<'a> {
         }
     }
     pub fn update_score_by_id(
-        &self,
-        p_id: &Uuid,
+        &'a self,
+        p_id: &'a Uuid,
         score: i64,
         db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a, i32> {
+    ) -> AsyncDbRes<'a, ()> {
         match self {
             Self::TeamEvent(sw) => match sw {
                 EventStateWrapper::Active(e) => e.update_score_by_id(p_id, score, db_pool),
@@ -98,10 +98,10 @@ impl<'a> EventWrapper<'a> {
             },
         }
     }
-    pub fn reset_score(&self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
+    pub fn reset_score(&'a self, db_pool: &'a SqlitePool) -> AsyncDbRes<'a, ()> {
         match self {
             Self::TeamEvent(sw) => match sw {
-                EventStateWrapper::New(e) => e.reset_score(db_pool),
+                EventStateWrapper::New(e) => Box::pin(async move { e.reset_score(db_pool).await }),
                 _ => Box::pin(async move {
                     Err(VaderError::EventActive(
                         "Unable to reset score , Event may have already started / ended.",
@@ -109,7 +109,7 @@ impl<'a> EventWrapper<'a> {
                 }),
             },
             Self::UserEvent(sw) => match sw {
-                EventStateWrapper::New(e) => e.reset_score(db_pool),
+                EventStateWrapper::New(e) => Box::pin(async move { e.reset_score(db_pool).await }),
                 _ => Box::pin(async move {
                     Err(VaderError::EventActive(
                         "Unable to reset score , Event may have already started / ended.",

@@ -77,13 +77,3 @@ pub struct MemberInfo {
     pub team_id: Uuid,
     pub members: Vec<Uuid>,
 }
-#[derive(Serialize)]
-pub struct ScoreResponse {
-    id: Uuid,
-    new_score: i32,
-}
-impl ScoreResponse {
-    pub fn new(id: Uuid, new_score: i32) -> Self {
-        Self { id, new_score }
-    }
-}

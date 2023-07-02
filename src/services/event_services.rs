@@ -261,18 +261,16 @@ impl<'a> Event<'a, User<'a>, ActiveEvent> {
         user_id: &Uuid,
         points: i64,
         db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a, i32> {
+    ) -> AsyncDbRes<'a, ()> {
         let id = user_id.to_string();
         Box::pin(async move {
-            let res = sqlx::query_as::<_, (i32,)>(
-                "UPDATE users set score=score+? WHERE id=? RETURNING score",
-            )
-            .bind(points)
-            .bind(id)
-            .fetch_one(db_pool)
-            .await;
+            let res = sqlx::query("UPDATE users set score=score+? WHERE id=?")
+                .bind(points)
+                .bind(id)
+                .execute(db_pool)
+                .await;
             match res {
-                Ok(score) => Ok(score.0),
+                Ok(_) => Ok(()),
                 Err(err) => return Err(VaderError::SqlxError(err)),
             }
         })
@@ -296,18 +294,16 @@ impl<'a> Event<'a, Team<'a>, ActiveEvent> {
         team_id: &Uuid,
         points: i64,
         db_pool: &'a SqlitePool,
-    ) -> AsyncDbRes<'a, i32> {
+    ) -> AsyncDbRes<'a, ()> {
         let id = team_id.to_string();
         Box::pin(async move {
-            let res = sqlx::query_as::<_, (i32,)>(
-                "UPDATE teams set score=score+? WHERE id=? RETURNING score",
-            )
-            .bind(points)
-            .bind(id)
-            .fetch_one(db_pool)
-            .await;
+            let res = sqlx::query("UPDATE teams set score=score+? WHERE id=?")
+                .bind(points)
+                .bind(id)
+                .execute(db_pool)
+                .await;
             match res {
-                Ok(score) => Ok(score.0),
+                Ok(_) => Ok(()),
                 Err(err) => return Err(VaderError::SqlxError(err)),
             }
         })
