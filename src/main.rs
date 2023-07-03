@@ -2,6 +2,7 @@ use std::env;
 use std::sync::Arc;
 
 use actix::Actor;
+use actix_cors::Cors;
 use actix_session::storage::CookieSessionStore;
 use actix_session::SessionMiddleware;
 use actix_web::cookie::Key;
@@ -64,6 +65,8 @@ async fn main() -> std::io::Result<()> {
                 CookieSessionStore::default(),
                 session_key.clone(),
             ))
+            //warning : Never use Cors::permissive in production : )
+            .wrap(Cors::permissive())
             .app_data(Data::new(app_state.clone()))
             .app_data(Data::new(vb_srv.clone()))
             .app_data(Data::new(cur_fts.clone()))
