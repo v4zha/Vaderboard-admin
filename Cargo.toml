@@ -34,3 +34,6 @@ sqlx = { version = "^0.6", features = ["sqlite", "runtime-actix-native-tls"] }
 tokio = { version = "^1.29", features = ["full"] }
 dotenvy = "^0.15"
 bcrypt = "^0.14"
+
+[profile.dev.package.sqlx-macros]
+opt-level = 3
