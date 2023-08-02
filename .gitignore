@@ -31,3 +31,5 @@ test.sql
 test
 target
 
+#nix
+.direnv
