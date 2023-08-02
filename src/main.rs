@@ -10,7 +10,7 @@ use actix_web::web::{self, Data};
 use actix_web::{App, HttpServer};
 use dotenvy::dotenv;
 use sqlx::SqlitePool;
-
+use mimalloc::MiMalloc;
 mod handlers;
 mod models;
 mod services;
@@ -29,6 +29,10 @@ use crate::handlers::query_handlers::{
 use crate::models::query_models::{CurFtsServer, VboardSrv};
 use crate::models::v_models::AppState;
 use crate::services::v_middlewares::AdminOnlyGuard;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
+
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
