@@ -306,11 +306,11 @@ impl Actor for VboardClient {
 
 pub struct VboardSrv {
     pub vb_addr: HashSet<Addr<VboardClient>>,
-    pub app_state: Arc<AppState>,
+    pub app_state: web::Data<AppState>,
     pub db_pool: Pool<Sqlite>,
 }
 impl VboardSrv {
-    pub fn new(app_state: Arc<AppState>, db_pool: Pool<Sqlite>) -> Self {
+    pub fn new(app_state: web::Data<AppState>, db_pool: Pool<Sqlite>) -> Self {
         VboardSrv {
             vb_addr: HashSet::new(),
             app_state,

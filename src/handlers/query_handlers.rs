@@ -14,7 +14,7 @@ use crate::models::query_models::{
 use crate::models::v_models::{AppState, Team, User};
 
 #[get("/event/info")]
-pub async fn get_current_event(app_state: web::Data<Arc<AppState>>) -> impl Responder {
+pub async fn get_current_event(app_state: web::Data<AppState>) -> impl Responder {
     let event_state = app_state.current_event.lock().await;
     if event_state.is_none() {
         debug!("Request delined.No event added");
@@ -26,7 +26,7 @@ pub async fn get_current_event(app_state: web::Data<Arc<AppState>>) -> impl Resp
 }
 #[get("event/info/team/{count}")]
 pub async fn get_event_teams(
-    app_state: web::Data<Arc<AppState>>,
+    app_state: web::Data<AppState>,
     srv_addr: web::Data<Addr<CurFtsServer<'static>>>,
     db_pool: web::Data<SqlitePool>,
     count: web::Path<u32>,
@@ -62,7 +62,7 @@ pub async fn get_event_teams(
 }
 #[get("event/info/team/rem_members/{count}")]
 pub async fn get_event_rem_members(
-    app_state: web::Data<Arc<AppState>>,
+    app_state: web::Data<AppState>,
     srv_addr: web::Data<Addr<CurFtsServer<'static>>>,
     db_pool: web::Data<SqlitePool>,
     count: web::Path<u32>,
@@ -99,7 +99,7 @@ pub async fn get_event_rem_members(
 
 #[get("event/info/user/{count}")]
 pub async fn get_event_users(
-    app_state: web::Data<Arc<AppState>>,
+    app_state: web::Data<AppState>,
     srv_addr: web::Data<Addr<CurFtsServer<'static>>>,
     db_pool: web::Data<SqlitePool>,
     count: web::Path<u32>,
@@ -241,7 +241,7 @@ pub async fn user_fts(
 #[get("/vaderboard")]
 pub async fn vaderboard(
     req: HttpRequest,
-    app_state: web::Data<Arc<AppState>>,
+    app_state: web::Data<AppState>,
     srv_addr: web::Data<Addr<VboardSrv>>,
     stream: web::Payload,
 ) -> impl Responder {

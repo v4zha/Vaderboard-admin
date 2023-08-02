@@ -30,7 +30,7 @@
             taplo
             yaml-language-server
             nodejs
-            typescript-language-server
+            openssl
           ];
         };
       }

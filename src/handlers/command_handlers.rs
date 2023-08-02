@@ -19,7 +19,7 @@ use crate::models::wrapper_models::{EventStateWrapper, EventWrapper};
 #[post("/event/add")]
 pub async fn add_event<'a>(
     event_data: web::Json<EventReq<'a>>,
-    app_state: web::Data<Arc<AppState>>,
+    app_state: web::Data<AppState>,
     db_pool: web::Data<SqlitePool>,
 ) -> Either<impl Responder, impl Responder>
 where
@@ -36,7 +36,7 @@ where
 
 pub async fn add_team_event<'a>(
     event_info: EventReq<'a>,
-    app_state: web::Data<Arc<AppState>>,
+    app_state: web::Data<AppState>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder
 where
@@ -74,7 +74,7 @@ where
 }
 pub async fn add_user_event<'a>(
     event_info: EventReq<'a>,
-    app_state: web::Data<Arc<AppState>>,
+    app_state: web::Data<AppState>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder
 where
@@ -113,7 +113,7 @@ where
 
 #[post("/event/start")]
 pub async fn start_event(
-    app_state: web::Data<Arc<AppState>>,
+    app_state: web::Data<AppState>,
     vb_srv: web::Data<Addr<VboardSrv>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
@@ -153,7 +153,7 @@ pub async fn start_event(
 }
 #[post("/event/stop")]
 pub async fn end_event(
-    app_state: web::Data<Arc<AppState>>,
+    app_state: web::Data<AppState>,
     srv_addr: web::Data<Addr<CurFtsServer<'static>>>,
 ) -> impl Responder {
     let mut event_state = app_state.current_event.lock().await;
@@ -181,7 +181,7 @@ pub async fn end_event(
 #[post("/score/update")]
 pub async fn update_score(
     score_req: web::Json<ScoreUpdate>,
-    app_state: web::Data<Arc<AppState>>,
+    app_state: web::Data<AppState>,
     vb_srv: web::Data<Addr<VboardSrv>>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
@@ -211,7 +211,7 @@ pub async fn update_score(
 }
 #[post("/score/reset")]
 pub async fn reset_score(
-    app_state: web::Data<Arc<AppState>>,
+    app_state: web::Data<AppState>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let event_state = app_state.current_event.lock().await;
@@ -235,7 +235,7 @@ pub async fn reset_score(
 #[post("/event/team/add")]
 pub async fn add_team(
     c_info: web::Json<ContestantInfo<'_>>,
-    app_state: web::Data<Arc<AppState>>,
+    app_state: web::Data<AppState>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let event_state = app_state.current_event.lock().await;
@@ -265,7 +265,7 @@ pub async fn add_team(
 #[post("/event/team/add/with_members")]
 pub async fn add_team_with_members(
     tm_info: web::Json<TeamWithMembers<'_>>,
-    app_state: web::Data<Arc<AppState>>,
+    app_state: web::Data<AppState>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let event_state = app_state.current_event.lock().await;
@@ -301,7 +301,7 @@ pub async fn add_team_with_members(
 #[post("/event/user/add")]
 pub async fn add_user(
     c_info: web::Json<ContestantInfo<'_>>,
-    app_state: web::Data<Arc<AppState>>,
+    app_state: web::Data<AppState>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let event_state = app_state.current_event.lock().await;
@@ -335,7 +335,7 @@ pub async fn add_user(
 #[post("/event/team/add/members")]
 pub async fn add_team_members(
     m_info: web::Json<MemberInfo>,
-    app_state: web::Data<Arc<AppState>>,
+    app_state: web::Data<AppState>,
     db_pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let event_state = app_state.current_event.lock().await;
@@ -365,7 +365,7 @@ pub async fn add_team_members(
 #[post("/event/delete")]
 pub async fn delete_event(
     db_pool: web::Data<SqlitePool>,
-    app_state: web::Data<Arc<AppState>>,
+    app_state: web::Data<AppState>,
     id_info: web::Json<IdQuery>,
 ) -> impl Responder {
     let id = id_info.into_inner().id;

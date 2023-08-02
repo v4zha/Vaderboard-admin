@@ -1,5 +1,4 @@
 use std::env;
-use std::sync::Arc;
 
 use actix::Actor;
 use actix_cors::Cors;
@@ -38,8 +37,8 @@ async fn main() -> std::io::Result<()> {
     env_logger::builder()
         .filter_level(log::LevelFilter::Debug)
         .init();
-    let host = env::var("HOST").unwrap_or("127.0.0.1".to_string());
-    let port = env::var("PORT").unwrap_or("8080".to_string());
+    let host = env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     let db_url = env::var("DATABASE_URL").expect("Error Reading DATABASE_URL Env Variable");
     let vb_count: u32 = env::var("VADERBOARD_COUNT").map_or(10, |count| {
         count
@@ -51,7 +50,7 @@ async fn main() -> std::io::Result<()> {
     let db_pool = SqlitePool::connect(&db_url)
         .await
         .expect("Error connecting to Database");
-    let app_state = Arc::new(AppState::new(vb_count));
+    let app_state = web::Data::new(AppState::new(vb_count));
     //VaderBoard server Actor
     let vb_srv = VboardSrv::new(app_state.clone(), db_pool.clone()).start();
     //Current Event Fts Actor
@@ -67,7 +66,7 @@ async fn main() -> std::io::Result<()> {
             ))
             //warning : Never use Cors::permissive in production : )
             .wrap(Cors::permissive())
-            .app_data(Data::new(app_state.clone()))
+            .app_data(app_state.clone())
             .app_data(Data::new(vb_srv.clone()))
             .app_data(Data::new(cur_fts.clone()))
             .app_data(Data::new(db_pool.clone()))
