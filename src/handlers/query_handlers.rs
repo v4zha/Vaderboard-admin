@@ -1,4 +1,4 @@
-use std::sync::Arc;
+
 
 use actix::Addr;
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};

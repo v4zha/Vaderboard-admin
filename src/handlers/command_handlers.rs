@@ -1,4 +1,4 @@
-use std::sync::Arc;
+
 
 use actix::Addr;
 use actix_session::Session;
