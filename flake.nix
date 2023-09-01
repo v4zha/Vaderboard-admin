@@ -31,6 +31,8 @@
             yaml-language-server
             nodejs
             openssl
+            pkgconfig
+            sqlx-cli
           ];
         };
       }

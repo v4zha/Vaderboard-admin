@@ -1,19 +1,24 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1.59.0 AS chef
+FROM rust:latest as builder
+
 WORKDIR /app
 
-FROM chef AS planner
-COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
+RUN apt-get update && apt-get install -y libsqlite3-dev && cargo install sqlx-cli --no-default-features --features sqlite
 
-FROM chef AS builder 
-COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
-RUN cargo build --release --bin app
 
-FROM debian:bullseye-slim AS runtime
+
+RUN sqlx database create && \
+    sqlx migrate run
+RUN cargo build --release
+
+FROM debian:buster-slim
+
+RUN apt-get update && apt-get install -y sqlite3
+
 WORKDIR /app
-COPY --from=builder /app/target/release/app /usr/local/bin
-COPY .env /app/.env
-COPY dist /app/dist
-ENTRYPOINT ["/usr/local/bin/app"]
+
+COPY --from=builder /app/target/release/your_project_name /app/your_project_name
+
+EXPOSE 8080
+
+CMD ["/app/"]

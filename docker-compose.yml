@@ -1,0 +1,18 @@
+version: '3'
+services:
+  db:
+    image: sqlite:latest
+    container_name: vaderboard-db
+    volumes:
+      - ./data:/var/lib/sqlite
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file: .env
+    depends_on:
+      - db
+    volumes:
+      - ./data:/app/data
