@@ -1,6 +1,6 @@
 #!/bin/bash
-
-IMAGE_NAME="vaderboard-admin"
+USER="v4zha"
+IMAGE_NAME=$USER\/"vboard-admin"
 TAG="latest"
 
 docker build -t $IMAGE_NAME:$TAG .
