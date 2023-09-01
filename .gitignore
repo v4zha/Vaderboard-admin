@@ -25,7 +25,7 @@ dist-ssr
 
 # rust files 
 
-.env
+.env*
 vaderboard.db*
 target
 
