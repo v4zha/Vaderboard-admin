@@ -27,8 +27,6 @@ dist-ssr
 
 .env
 vaderboard.db*
-test.sql
-test
 target
 
 #nix
