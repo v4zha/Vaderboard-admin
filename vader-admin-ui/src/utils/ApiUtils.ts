@@ -1,9 +1,8 @@
 import { EventInfo, TeamInfo, UserInfo } from "../Types";
 
-
-const API_URL=import.meta.env.VITE_API_URL;
-export const apiUrl = "http://{API_URL}";
-export const apiUrlWs = "ws://{API_URL}";
+const VITE_API_URL=import.meta.env.VITE_API_URL;
+export const apiUrl = `http://${VITE_API_URL}`;
+export const apiUrlWs = `ws://${VITE_API_URL}`;
 
 export const getEvents = async (): Promise<Array<EventInfo>> => {
   let events: Array<EventInfo> = [];
