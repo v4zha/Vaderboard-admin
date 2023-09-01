@@ -54,6 +54,7 @@ To install and run the VaderBoard Admin Panel, follow the steps below:
 8. Access the VaderBoard Admin Panel by visiting `http://localhost:8080` in your web browser.
 
 9. Alternative pull the docker image from docker hub by running `docker run -p 8080:8080 v4zha/vboard-admin:latest`.
+
 10. Alternative Build the docker container by running `build.sh` or `docker build -t vaderboard-admin . ` and run `docker run -p 8080:8080 --env-file .env vaderboard-admin`
 
 ## Features
