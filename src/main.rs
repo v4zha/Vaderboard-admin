@@ -9,8 +9,8 @@ use actix_web::middleware::Logger;
 use actix_web::web::{self, Data};
 use actix_web::{App, HttpServer};
 use dotenvy::dotenv;
-use sqlx::SqlitePool;
 use mimalloc::MiMalloc;
+use sqlx::SqlitePool;
 mod handlers;
 mod models;
 mod services;
@@ -32,7 +32,6 @@ use crate::services::v_middlewares::AdminOnlyGuard;
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
-
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -59,6 +58,7 @@ async fn main() -> std::io::Result<()> {
     let vb_srv = VboardSrv::new(app_state.clone(), db_pool.clone()).start();
     //Current Event Fts Actor
     let cur_fts = CurFtsServer::new().start();
+    let cpus = num_cpus::get();
     log::info!("Database connection successful");
     log::info!("Server Starting on :  {}", host_port);
     HttpServer::new(move || {
@@ -108,6 +108,7 @@ async fn main() -> std::io::Result<()> {
             .service(Files::new("/", "dist").index_file("index.html"))
     })
     .bind(host_port)?
+    .workers(cpus * 2)
     .run()
     .await
 }
