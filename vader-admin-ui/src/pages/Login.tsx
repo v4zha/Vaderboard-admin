@@ -1,4 +1,5 @@
 import { Container, TextField, Button, Typography } from "@mui/material";
+import { apiUrl } from "../utils/ApiUtils";
 import { useState } from "react";
 import "./Login.css";
 import { useNavigate } from "react-router-dom";
@@ -15,7 +16,7 @@ const Login = (): JSX.Element => {
             username: username,
             password: password,
         };
-        const url = "http://localhost:8080/login";
+        const url = `${apiUrl}/login`;
         const res = await fetch(url, {
             method: "POST",
             headers: {
