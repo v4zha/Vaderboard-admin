@@ -17,6 +17,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Set up environment variables
         run: |
+          echo  "VITE_API_URL=${{secrets.VITE_API_URL}}" > ./vader-admin-ui/.env.production
           echo "HOST=${{ secrets.HOST }}" > .env
           echo "PORT=${{ secrets.PORT }}" >> .env
           echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env

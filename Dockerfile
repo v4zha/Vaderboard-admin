@@ -32,7 +32,7 @@ VOLUME ["/app/data"]
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/vader-admin /app/
 COPY --from=builder /app/.env /app/
 COPY --from=builder /app/dist/ /app/dist/
-COPY --from=builder /app/vaderboard.db /app/data/
+COPY --from=builder /app/data/vaderboard.db /app/data/
 
 EXPOSE 8080
 
