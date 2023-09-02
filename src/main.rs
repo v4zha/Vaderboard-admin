@@ -2,6 +2,7 @@ use std::env;
 
 use actix::Actor;
 use actix_cors::Cors;
+use actix_session::config::PersistentSession;
 use actix_session::storage::CookieSessionStore;
 use actix_session::SessionMiddleware;
 use actix_web::cookie::Key;
@@ -64,10 +65,11 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
-            .wrap(SessionMiddleware::new(
-                CookieSessionStore::default(),
-                session_key.clone(),
-            ))
+            .wrap(
+                SessionMiddleware::builder(CookieSessionStore::default(), session_key.clone())
+                    .cookie_secure(false)
+                    .build(),
+            )
             //warning : Never use Cors::permissive in production : )
             .wrap(Cors::permissive())
             .app_data(app_state.clone())
@@ -77,7 +79,7 @@ async fn main() -> std::io::Result<()> {
             .service(login)
             .service(
                 web::scope("/admin")
-                    // .wrap(AdminOnlyGuard)
+                    .wrap(AdminOnlyGuard)
                     .service(add_event)
                     .service(add_user)
                     .service(add_team)

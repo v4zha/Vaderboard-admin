@@ -1,5 +1,3 @@
-
-
 use actix::Addr;
 use actix_session::Session;
 use actix_web::{post, web, Either, HttpResponse, Responder};
