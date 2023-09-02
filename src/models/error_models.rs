@@ -78,20 +78,20 @@ impl<'a> Display for VaderError<'a> {
 
             VaderError::UserNotFound(e) => write!(f, "User not Found.\n[error] : {}", e),
             VaderError::AdminHashError(e) => {
-                write!(f, "Admin Hash Error.\n[error] : {}", e.to_string())
+                write!(f, "Admin Hash Error.\n[error] : {}", e)
             }
             VaderError::BlockingOpError(e) => {
                 write!(
                     f,
                     "Error in performing blocking operation.\n[error] : {}",
-                    e.to_string()
+                    e
                 )
             }
             VaderError::SerdeJsonError(e) => {
                 write!(
                     f,
                     "Error in serializing object.\n[error] : {}",
-                    e.to_string()
+                    e
                 )
             }
         }
