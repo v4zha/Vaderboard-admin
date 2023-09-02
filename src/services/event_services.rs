@@ -124,7 +124,7 @@ impl<'a> Team<'a> {
                     team_id,
                     user_id,
                 )
-                .execute(&mut transaction)
+                .execute(&mut *transaction)
                 .await;
                 match res {
                     Ok(c) => {
