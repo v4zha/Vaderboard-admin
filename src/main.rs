@@ -40,7 +40,7 @@ async fn main() -> std::io::Result<()> {
     env_logger::builder()
         .filter_level(log::LevelFilter::Debug)
         .init();
-    let host = env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let host = env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     let db_url = env::var("DATABASE_URL").expect("Error Reading DATABASE_URL Env Variable");
     let vb_count: u32 = env::var("VADERBOARD_COUNT").map_or(10, |count| {
@@ -77,7 +77,7 @@ async fn main() -> std::io::Result<()> {
             .service(login)
             .service(
                 web::scope("/admin")
-                    .wrap(AdminOnlyGuard)
+                    // .wrap(AdminOnlyGuard)
                     .service(add_event)
                     .service(add_user)
                     .service(add_team)
