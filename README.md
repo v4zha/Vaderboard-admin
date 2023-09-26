@@ -28,7 +28,7 @@ To install and run the VaderBoard Admin Panel, follow the steps below:
     DATABASE_URL=<db url>
     ADMIN_USERNAME=<enter admin username>
     ADMIN_PASSWORD=<enter admin password>
-    VADERBOARD_LIMIT=10
+    VADERBOARD_COUNT=10
     ```
 
 4. Install [sqlx-cli](https://crates.io/crates/sqlx-cli)
