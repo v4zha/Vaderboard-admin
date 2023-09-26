@@ -23,7 +23,7 @@ jobs:
           echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
           echo "ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME }}" >> .env
           echo "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" >> .env
-          echo "VADERBOARD_LIMIT=${{ secrets.VADERBOARD_LIMIT }}" >> .env
+          echo "VADERBOARD_COUNT=${{ secrets.VADERBOARD_COUNT }}" >> .env
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
